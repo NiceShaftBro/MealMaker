@@ -154,7 +154,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🍽️ Dinner Decider</h1>
+        <h1>Dinner Decider</h1>
         <div class="status-container">
             <div id="fileStatus" class="file-status loading">Loading spreadsheet...</div>
         </div>
@@ -247,7 +247,7 @@
 
         function displayResults(results) {
             const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<h2 style="color: #333; margin-bottom: 20px; font-size: 1.5em;">🍽️ Your Dinner Plan:</h2><div class="results-grid">';
+            resultsDiv.innerHTML = '<div class="results-grid">';
             
             for (const category in results) {
                 const icon = getCategoryIcon(category);
