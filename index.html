@@ -388,21 +388,29 @@
                 return;
             }
 
+            console.log('Updates to send:', updates);
+
             // Send updates
             for (const update of updates) {
                 try {
-                    await fetch(`${SHEET_URL}/id/${update.id}`, {
+                    const response = await fetch(`${SHEET_URL}/id/${update.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ Enabled: update.enabled ? 'TRUE' : 'FALSE' })
                     });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    const result = await response.json();
+                    console.log('Update result for id', update.id, ':', result);
                 } catch (error) {
-                    console.error('Error updating item:', error);
-                    alert('Error updating some items. Please try again.');
+                    console.error('Error updating item:', update.id, error);
+                    alert(`Error updating item ${update.id}: ${error.message}`);
                     return;
                 }
             }
 
+            alert('Changes saved successfully!');
             // Refresh data
             loadSpreadsheet();
             hideItemList();
