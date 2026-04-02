@@ -110,21 +110,26 @@
             display: block;
             animation: fadeIn 0.5s ease-in;
         }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
         .result-item {
-            margin: 15px 0;
             padding: 20px;
             background: white;
             border-radius: 12px;
-            border-left: 5px solid #FF6B6B;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
         }
         .result-item:hover {
-            transform: translateX(5px);
-        }
-        .result-item strong {
-            color: #333;
-            font-size: 1.1em;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -227,17 +232,20 @@
 
         function displayResults(results) {
             const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<h2 style="color: #333; margin-bottom: 20px; font-size: 1.5em;">🍽️ Your Dinner Plan:</h2>';
+            resultsDiv.innerHTML = '<h2 style="color: #333; margin-bottom: 20px; font-size: 1.5em;">🍽️ Your Dinner Plan:</h2><div class="results-grid">';
             
             for (const category in results) {
                 const icon = getCategoryIcon(category);
                 resultsDiv.innerHTML += `
                     <div class="result-item">
-                        <strong>${icon} ${category}:</strong> ${results[category]}
+                        <div style="font-size: 2em; margin-bottom: 8px;">${icon}</div>
+                        <div style="font-size: 1.2em; font-weight: 700; margin-bottom: 4px;">${results[category]}</div>
+                        <div style="font-size: 0.9em; color: #666; text-transform: uppercase; letter-spacing: 1px;">${category}</div>
                     </div>
                 `;
             }
             
+            resultsDiv.innerHTML += '</div>';
             resultsDiv.classList.add('show');
         }
 
