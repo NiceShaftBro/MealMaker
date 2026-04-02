@@ -124,9 +124,15 @@
                 .then(data => {
                     spreadsheetData = data;
                     
+                    // Count enabled items
+                    const enabledCount = data.filter(row => 
+                        String(row['Enabled']).toUpperCase().trim() === 'TRUE'
+                    ).length;
+                    const totalCount = data.length;
+                    
                     console.log('Loaded data:', spreadsheetData);
                     console.log('First row:', spreadsheetData[0]);
-                    statusDiv.textContent = `✓ Spreadsheet loaded (${spreadsheetData.length} items)`;
+                    statusDiv.textContent = `✓ Spreadsheet loaded (${enabledCount} items enabled of ${totalCount})`;
                     statusDiv.className = 'file-status success';
                     document.getElementById('pickBtn').disabled = false;
                 })
