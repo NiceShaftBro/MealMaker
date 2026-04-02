@@ -113,15 +113,23 @@
         .results-grid {
             display: flex;
             align-items: stretch;
-            justify-content: center;
-            flex-wrap: wrap;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
             gap: 16px;
             margin-top: 20px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .results-grid::-webkit-scrollbar {
+            height: 8px;
+        }
+        .results-grid::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.25);
+            border-radius: 8px;
         }
         .result-item {
-            flex: 1 1 170px;
-            max-width: 220px;
-            min-width: 150px;
+            flex: 0 0 180px;
+            min-width: 160px;
             padding: 20px;
             background: white;
             border-radius: 14px;
