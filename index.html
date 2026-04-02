@@ -100,24 +100,23 @@
             transform: none;
         }
         .results {
-            margin: 12px auto 0;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.5);
-            border: 1px solid rgba(255,255,255,0.65);
-            border-radius: 18px;
+            margin-top: 12px;
+            padding: 0;
+            background: transparent;
+            border: none;
+            border-radius: 0;
             display: none;
-            box-shadow: 0 10px 24px rgba(0,0,0,0.08);
-            width: fit-content;
+            box-shadow: none;
+            width: 100%;
             max-width: 100%;
         }
         .results.show {
             display: block;
-            animation: fadeIn 0.4s ease-in;
+            animation: fadeIn 0.3s ease-in;
         }
         .results-grid {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column;
             gap: 12px;
             margin-top: 0;
             padding-bottom: 0;
@@ -127,29 +126,30 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            width: 165px;
-            min-height: 150px;
-            padding: 14px;
+            width: 100%;
+            min-height: 110px;
+            padding: 16px;
             background: white;
-            border-radius: 14px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+            border-radius: 16px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             text-align: center;
-            font-size: 1.1em;
+            font-size: 1.15em;
             font-weight: 700;
             color: #333;
+            box-sizing: border-box;
         }
         .result-item:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: 0 8px 20px rgba(0,0,0,0.12);
         }
         @media (max-width: 600px) {
             .results {
-                padding: 10px;
+                margin-top: 10px;
             }
             .result-item {
-                width: min(180px, 100%);
-                min-height: 135px;
+                min-height: 100px;
+                padding: 14px;
             }
         }
         .item-list {
