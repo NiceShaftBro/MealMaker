@@ -155,9 +155,10 @@
             spreadsheetData.forEach(row => {
                 const category = row['Category'];
                 const item = row['Food'];
-                const enabled = row['Enabled'];
+                const enabled = String(row['Enabled']).toUpperCase().trim();
 
-                if (category && item && enabled) {
+                // Only include if enabled is TRUE (or true)
+                if (category && item && (enabled === 'TRUE' || enabled === 'true')) {
                     if (!categories[category]) {
                         categories[category] = [];
                     }
