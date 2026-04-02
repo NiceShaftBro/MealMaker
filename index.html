@@ -418,6 +418,14 @@
             console.log('Updates to send:', updates);
 
             // Send updates
+            const saveBtn = document.querySelector('#itemList .save-btn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.style.opacity = '0.6';
+                saveBtn.style.cursor = 'not-allowed';
+                saveBtn.textContent = 'Saving...';
+            }
+
             for (const update of updates) {
                 const updateTarget = update.id ? `${SHEET_URL}/id/${update.id}` : `${SHEET_URL}/Food/${encodeURIComponent(update.item)}`;
                 try {
@@ -434,11 +442,27 @@
                 } catch (error) {
                     console.error('Error updating item:', updateTarget, error);
                     alert(`Error updating item ${update.item || update.id}: ${error.message}`);
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.style.opacity = '1';
+                        saveBtn.style.cursor = 'pointer';
+                        saveBtn.textContent = 'Save Changes';
+                    }
                     return;
                 }
             }
 
             alert('Changes saved successfully!');
+
+            setTimeout(() => {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.style.opacity = '1';
+                    saveBtn.style.cursor = 'pointer';
+                    saveBtn.textContent = 'Save Changes';
+                }
+            }, 2000);
+
             // Refresh data
             loadSpreadsheet();
             hideItemList();
