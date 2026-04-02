@@ -431,64 +431,30 @@
         }
 
         async function sendUpdateToAppsScript(update) {
-            const payloads = [
-                {
-                    action: 'updateItem',
-                    rowIndex: update.rowIndex,
-                    item: update.item,
-                    category: update.category,
-                    enabled: update.enabled
-                },
-                {
-                    action: 'updateItem',
-                    rowIndex: update.rowIndex,
+            const payload = {
+                action: 'update',
+                rowIndex: Number(update.rowIndex),
+                row: {
                     Food: update.item,
                     Category: update.category,
-                    Enabled: update.enabled
-                },
-                {
-                    action: 'updateItem',
-                    rowIndex: update.rowIndex,
-                    Food: update.item,
-                    Category: update.category,
-                    Enabled: update.enabled ? 'TRUE' : 'FALSE'
-                },
-                {
-                    action: 'updateItems',
-                    updates: [{
-                        rowIndex: update.rowIndex,
-                        item: update.item,
-                        category: update.category,
-                        enabled: update.enabled
-                    }]
+                    Enabled: update.enabled,
+                    Exclusions: update.exclusions || ''
                 }
-            ];
+            };
 
-            let lastError = new Error('Update failed');
+            const result = await fetchApiJson(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
 
-            for (const payload of payloads) {
-                try {
-                    const result = await fetchApiJson(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload)
-                    });
+            console.log('Apps Script update payload/result:', payload, result);
 
-                    console.log('Apps Script update attempt:', payload, result);
-
-                    if (result && result.success === false) {
-                        lastError = new Error(result.message || 'Update failed');
-                        continue;
-                    }
-
-                    return result;
-                } catch (error) {
-                    console.error('Apps Script update attempt failed:', payload, error);
-                    lastError = error;
-                }
+            if (result && result.success === false) {
+                throw new Error(result.error || result.message || 'Update failed');
             }
 
-            throw lastError;
+            return result;
         }
 
         async function saveChanges() {
@@ -504,7 +470,14 @@
                 const row = spreadsheetData.find(r => (id ? r.id == id : rowIndex ? String(r.rowIndex) === String(rowIndex) : r.Food === item && r.Category === category));
                 const currentEnabled = row ? String(row['Enabled']).toUpperCase().trim() === 'TRUE' : false;
                 if (row && currentEnabled !== newEnabled) {
-                    updates.push({ id: row.id || '', rowIndex: row.rowIndex || '', item: row.Food, category: row.Category, enabled: newEnabled });
+                    updates.push({
+                        id: row.id || '',
+                        rowIndex: row.rowIndex || '',
+                        item: row.Food,
+                        category: row.Category,
+                        enabled: newEnabled,
+                        exclusions: row.Exclusions || ''
+                    });
                 }
             });
 
