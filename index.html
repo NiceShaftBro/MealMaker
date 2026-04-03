@@ -238,6 +238,10 @@
             color: #2f3542;
             word-break: break-word;
         }
+        .bought-item-name .pending-addition {
+            color: #1b8f2f;
+            font-weight: 800;
+        }
         .bought-stock-summary {
             display: none;
         }
@@ -2063,10 +2067,9 @@
                     html += `
                         <div class="bought-item-row">
                             <div class="bought-item-meta">
-                                <div class="bought-item-name">${row.Food}</div>
+                                <div class="bought-item-name">${row.Food}${pendingAmount > 0 ? ` <span class="pending-addition">(+${pendingAmount})</span>` : ''}</div>
                             </div>
                             <div class="bought-controls">
-                                <span class="bought-add-display ${pendingAmount > 0 ? 'pending' : ''}">${displayStock}</span>
                                 <button class="qty-btn step-btn step-plus" onclick="changeBoughtAmount('${rowKey}', ${step})">+${step}</button>
                             </div>
                         </div>
