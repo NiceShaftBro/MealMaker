@@ -541,7 +541,7 @@
             const maxQty = Math.max(1, currentMeal.Protein.stock);
             const nextQuantity = Math.min(maxQty, Math.max(1, eggQuantity + delta));
 
-            if (nextQuantity > 8) {
+            if (nextQuantity > 5) {
                 bomboclatActive = true;
                 eggQuantity = 2;
                 displayResults(currentMeal);
