@@ -410,9 +410,12 @@
         let bomboclatActive = false;
         let bomboclatTimeoutId = null;
         let bomboclatCanTrigger = true;
+        let sauceMetadataMap = new Map();
         
         // Google Apps Script web app endpoint
         const API_URL = 'https://script.google.com/macros/s/AKfycbx_ljmCd4ipExfblatWEnG7LGUGxNIytiWLOxb7QwDf5vELmnDgPAImoqLkjVk2_LuNOw/exec';
+        // Read-only metadata source that includes Opened/UseByDate columns
+        const SAUCE_META_URL = 'https://opensheet.elk.sh/12KGA-cvI-pvEpkJZlyH17pBq99Ocb1Q-v0Vx9jBim4I/Sheet1';
 
         // Load data on page load
         window.addEventListener('load', loadSpreadsheet);
@@ -443,12 +446,21 @@
             return Number.isFinite(parsedStock) ? Math.max(0, parsedStock) : 1;
         }
 
+        function makeItemKey(item, category) {
+            const normalizedItem = String(item ?? '').toLowerCase().trim();
+            const normalizedCategory = String(category ?? '').toLowerCase().trim();
+            if (!normalizedItem || !normalizedCategory) {
+                return '';
+            }
+            return `${normalizedCategory}::${normalizedItem}`;
+        }
+
         function getSauceOpenedValue(row) {
             return row?.Opened ?? row?.opened ?? row?.E ?? '';
         }
 
         function getSauceExpiryValue(row) {
-            return row?.Expiry ?? row?.expiry ?? row?.['Expiry Date'] ?? row?.['expiry date'] ?? row?.H ?? '';
+            return row?.UseByDate ?? row?.['Use By Date'] ?? row?.Expiry ?? row?.expiry ?? row?.['Expiry Date'] ?? row?.['expiry date'] ?? row?.H ?? '';
         }
 
         function isOpenedValue(value) {
@@ -473,6 +485,19 @@
                 const serialDate = new Date(Math.round((numericValue - 25569) * 86400 * 1000));
                 if (!Number.isNaN(serialDate.getTime())) {
                     return serialDate;
+                }
+            }
+
+            // Handle dd/mm/yyyy and dd-mm-yyyy explicitly.
+            const dmyMatch = textValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+            if (dmyMatch) {
+                const day = Number(dmyMatch[1]);
+                const month = Number(dmyMatch[2]);
+                const rawYear = Number(dmyMatch[3]);
+                const year = rawYear < 100 ? 2000 + rawYear : rawYear;
+                const parsedDmy = new Date(year, month - 1, day);
+                if (!Number.isNaN(parsedDmy.getTime())) {
+                    return parsedDmy;
                 }
             }
 
@@ -524,7 +549,7 @@
             statusDiv.className = 'file-status loading';
             
             fetchApiJson(API_URL)
-                .then(data => {
+                .then(async data => {
                     const rows = Array.isArray(data) ? data : data.items || data.data || [];
                     // Ignore blank/invalid rows from API responses to avoid accidental writes.
                     spreadsheetData = rows.filter(row => {
@@ -532,6 +557,24 @@
                         const category = String(row?.Category ?? '').trim();
                         return item !== '' && category !== '';
                     });
+
+                    // Merge sauce metadata from a read-only endpoint with full columns.
+                    sauceMetadataMap = new Map();
+                    try {
+                        const metaRows = await fetchApiJson(SAUCE_META_URL);
+                        if (Array.isArray(metaRows)) {
+                            metaRows.forEach(metaRow => {
+                                const key = makeItemKey(metaRow?.Food, metaRow?.Category);
+                                if (!key) return;
+                                sauceMetadataMap.set(key, {
+                                    opened: getSauceOpenedValue(metaRow),
+                                    expiry: getSauceExpiryValue(metaRow)
+                                });
+                            });
+                        }
+                    } catch (metaError) {
+                        console.warn('Could not load sauce metadata endpoint:', metaError);
+                    }
                     
                     // Count enabled items
                     const enabledCount = spreadsheetData.filter(row => 
@@ -580,14 +623,15 @@
                     if (!categories[category]) {
                         categories[category] = [];
                     }
+                    const meta = sauceMetadataMap.get(makeItemKey(item, category)) || {};
                     categories[category].push({
                         item,
                         rowIndex: row['rowIndex'],
                         category,
                         enabled: true,
                         stock,
-                        opened: getSauceOpenedValue(row),
-                        expiry: getSauceExpiryValue(row),
+                        opened: meta.opened ?? getSauceOpenedValue(row),
+                        expiry: meta.expiry ?? getSauceExpiryValue(row),
                         exclusions: row['Exclusions'] || ''
                     });
                 }
