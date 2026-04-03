@@ -634,6 +634,66 @@
             return computed;
         }
 
+        function getItemExpiryDate(row) {
+            const directExpiry = parseDateValue(row?.expiry ?? getSauceExpiryValue(row));
+            const opened = isOpenedValue(row?.opened ?? getSauceOpenedValue(row));
+            const fallbackExpiry = opened
+                ? computeUseByFromOpenDate(row?.openDate ?? getSauceOpenDateValue(row), row?.shelfLifeDays ?? getSauceShelfLifeValue(row))
+                : null;
+
+            return directExpiry || fallbackExpiry;
+        }
+
+        function buildEnabledCategories() {
+            const categories = {};
+
+            spreadsheetData.forEach(row => {
+                const category = row['Category'];
+                const item = row['Food'];
+                const enabled = String(row['Enabled']).toUpperCase().trim();
+                const stock = getStockValue(row);
+
+                if (category && item && (enabled === 'TRUE' || enabled === 'true')) {
+                    if (!categories[category]) {
+                        categories[category] = [];
+                    }
+
+                    const meta = sauceMetadataMap.get(makeItemKey(item, category)) || {};
+                    const selection = {
+                        item,
+                        id: row['id'] || '',
+                        rowIndex: row['rowIndex'],
+                        category,
+                        enabled: true,
+                        stock,
+                        opened: meta.opened ?? getSauceOpenedValue(row),
+                        openDate: meta.openDate ?? getSauceOpenDateValue(row),
+                        shelfLifeDays: meta.shelfLifeDays ?? getSauceShelfLifeValue(row),
+                        expiry: meta.expiry ?? getSauceExpiryValue(row),
+                        exclusions: row['Exclusions'] || ''
+                    };
+
+                    selection.expiryDate = getItemExpiryDate(selection);
+                    categories[category].push(selection);
+                }
+            });
+
+            return categories;
+        }
+
+        function finishMealSelection(results) {
+            bomboclatActive = false;
+            if (bomboclatTimeoutId) {
+                clearTimeout(bomboclatTimeoutId);
+                bomboclatTimeoutId = null;
+            }
+            bomboclatCanTrigger = true;
+            eggQuantity = 2;
+            currentMeal = results;
+            hideSecretView();
+            displayResults(results);
+        }
+
         function renderSauceMeta(selectedItem) {
             const opened = isOpenedValue(selectedItem.opened);
             const expiryDate = parseDateValue(selectedItem.expiry) || (opened ? computeUseByFromOpenDate(selectedItem.openDate, selectedItem.shelfLifeDays) : null);
@@ -754,6 +814,7 @@
                 <h2>🍽️ Secret Menu</h2>
                 <div class="secret-menu-options">
                     <button onclick="showExpiringItems()" style="background: linear-gradient(45deg, #ff9f1c, #f77f00);">⏳ Expiring</button>
+                    <button onclick="pickExpiringItems()" style="background: linear-gradient(45deg, #7b2cbf, #5a189a);">🍽️ Use Expiring</button>
                 </div>
                 <div class="secret-return-wrap">
                     <button class="secret-return-btn" onclick="hideSecretView()">↩ Return</button>
@@ -843,35 +904,7 @@
                 return;
             }
 
-            const categories = {};
-            
-            spreadsheetData.forEach(row => {
-                const category = row['Category'];
-                const item = row['Food'];
-                const enabled = String(row['Enabled']).toUpperCase().trim();
-                const stock = getStockValue(row);
-
-                // Include enabled items even if out of stock so the UI can show their status.
-                if (category && item && (enabled === 'TRUE' || enabled === 'true')) {
-                    if (!categories[category]) {
-                        categories[category] = [];
-                    }
-                    const meta = sauceMetadataMap.get(makeItemKey(item, category)) || {};
-                    categories[category].push({
-                        item,
-                        id: row['id'] || '',
-                        rowIndex: row['rowIndex'],
-                        category,
-                        enabled: true,
-                        stock,
-                        opened: meta.opened ?? getSauceOpenedValue(row),
-                        openDate: meta.openDate ?? getSauceOpenDateValue(row),
-                        shelfLifeDays: meta.shelfLifeDays ?? getSauceShelfLifeValue(row),
-                        expiry: meta.expiry ?? getSauceExpiryValue(row),
-                        exclusions: row['Exclusions'] || ''
-                    });
-                }
-            });
+            const categories = buildEnabledCategories();
 
             if (Object.keys(categories).length === 0) {
                 alert('No enabled items are currently in stock.');
@@ -884,15 +917,45 @@
                 results[category] = items[Math.floor(Math.random() * items.length)];
             }
 
-            bomboclatActive = false;
-            if (bomboclatTimeoutId) {
-                clearTimeout(bomboclatTimeoutId);
-                bomboclatTimeoutId = null;
+            finishMealSelection(results);
+        }
+
+        async function pickExpiringItems() {
+            if (spreadsheetData.length === 0) {
+                alert('Please wait for spreadsheet to load');
+                return;
             }
-            bomboclatCanTrigger = true;
-            eggQuantity = 2;
-            currentMeal = results;
-            displayResults(results);
+
+            const categories = buildEnabledCategories();
+
+            if (Object.keys(categories).length === 0) {
+                alert('No enabled items are currently in stock.');
+                return;
+            }
+
+            const results = {};
+            for (const category in categories) {
+                const items = categories[category];
+                const sortedByExpiry = items
+                    .filter(item => item.expiryDate instanceof Date && !Number.isNaN(item.expiryDate.getTime()))
+                    .sort((a, b) => {
+                        const aDays = getDaysUntil(a.expiryDate);
+                        const bDays = getDaysUntil(b.expiryDate);
+                        const aExpired = aDays < 0 ? 1 : 0;
+                        const bExpired = bDays < 0 ? 1 : 0;
+
+                        if (aExpired !== bExpired) {
+                            return aExpired - bExpired;
+                        }
+
+                        const dateDiff = a.expiryDate - b.expiryDate;
+                        return dateDiff !== 0 ? dateDiff : String(a.item).localeCompare(String(b.item));
+                    });
+
+                results[category] = sortedByExpiry[0] || items[Math.floor(Math.random() * items.length)];
+            }
+
+            finishMealSelection(results);
         }
 
         function displayResults(results) {
