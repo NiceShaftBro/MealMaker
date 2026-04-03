@@ -306,6 +306,9 @@
         .sauce-label {
             color: #666;
         }
+        .expiry-value {
+            font: inherit;
+        }
         .opened-yes {
             color: #1b8f2f;
         }
@@ -570,12 +573,12 @@
             const expiryDate = parseDateValue(selectedItem.expiry) || (opened ? computeUseByFromOpenDate(selectedItem.openDate, selectedItem.shelfLifeDays) : null);
             let openedClass = opened ? 'opened-yes' : 'opened-no';
             let openedText = opened ? 'Opened' : 'Unopened';
-            let expiryText = 'Expiry: Unknown';
+            let expiryDisplayValue = 'Unknown';
             let expiryClass = 'expiry-normal';
 
             if (expiryDate) {
                 const daysUntilExpiry = getDaysUntil(expiryDate);
-                expiryText = `Expiry: ${formatDate(expiryDate)}`;
+                expiryDisplayValue = formatDate(expiryDate);
 
                 if (daysUntilExpiry < 0) {
                     openedClass = 'opened-expired';
@@ -588,7 +591,7 @@
                 }
             }
 
-            return `<div class="sauce-meta"><span class="sauce-open"><span class="sauce-label">Status:</span> <span class="${openedClass}">${openedText}</span></span><span class="sauce-expiry ${expiryClass}">${expiryText}</span></div>`;
+            return `<div class="sauce-meta"><span class="sauce-open"><span class="sauce-label">Status:</span> <span class="${openedClass}">${openedText}</span></span><span class="sauce-expiry"><span class="sauce-label">Expiry:</span> <span class="expiry-value ${expiryClass}">${expiryDisplayValue}</span></span></div>`;
         }
 
         function loadSpreadsheet() {
