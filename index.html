@@ -633,7 +633,41 @@
             loadSpreadsheet();
         }
 
-        function pickItems() {
+        async function promptToOpenSelectedSauces(results) {
+            for (const category of Object.keys(results)) {
+                const selection = results[category];
+                const isSauce = String(selection?.category ?? category).toLowerCase().trim() === 'sauce';
+
+                if (!isSauce || isOpenedValue(selection.opened)) {
+                    continue;
+                }
+
+                const shouldOpen = window.confirm(`${selection.item} is currently unopened. Do you want to open it now?`);
+                if (shouldOpen) {
+                    selection.opened = true;
+                    try {
+                        await sendUpdateToAppsScript({
+                            id: selection.id || '',
+                            rowIndex: selection.rowIndex || '',
+                            item: selection.item,
+                            category: selection.category || category,
+                            enabled: true,
+                            stock: selection.stock,
+                            opened: true,
+                            openDate: selection.openDate || '',
+                            shelfLifeDays: selection.shelfLifeDays || '',
+                            useByDate: selection.expiry || selection.useByDate || '',
+                            exclusions: selection.exclusions || ''
+                        });
+                    } catch (error) {
+                        console.error('Error updating sauce opened state:', error);
+                        alert(`Could not update ${selection.item} to opened: ${error.message}`);
+                    }
+                }
+            }
+        }
+
+        async function pickItems() {
             if (spreadsheetData.length === 0) {
                 alert('Please wait for spreadsheet to load');
                 return;
@@ -655,11 +689,14 @@
                     const meta = sauceMetadataMap.get(makeItemKey(item, category)) || {};
                     categories[category].push({
                         item,
+                        id: row['id'] || '',
                         rowIndex: row['rowIndex'],
                         category,
                         enabled: true,
                         stock,
                         opened: meta.opened ?? getSauceOpenedValue(row),
+                        openDate: meta.openDate ?? getSauceOpenDateValue(row),
+                        shelfLifeDays: meta.shelfLifeDays ?? getSauceShelfLifeValue(row),
                         expiry: meta.expiry ?? getSauceExpiryValue(row),
                         exclusions: row['Exclusions'] || ''
                     });
@@ -685,6 +722,7 @@
             bomboclatCanTrigger = true;
             eggQuantity = 2;
             currentMeal = results;
+            await promptToOpenSelectedSauces(results);
             displayResults(results);
         }
 
@@ -865,14 +903,6 @@
                         ? 0
                         : (selection.category === 'Protein' && selection.item.toLowerCase().trim().includes('egg') ? eggQuantity : 1);
 
-                    let nextOpened = getSauceOpenedValue(row);
-                    if (isSauce && !isOpenedValue(nextOpened)) {
-                        const shouldOpen = window.confirm(`${selection.item} is currently unopened. Do you want to open it now?`);
-                        if (shouldOpen) {
-                            nextOpened = true;
-                        }
-                    }
-
                     return {
                         id: row.id || '',
                         rowIndex: row.rowIndex || '',
@@ -880,7 +910,7 @@
                         category: row.Category,
                         enabled: String(row['Enabled']).toUpperCase().trim() === 'TRUE',
                         stock: isSauce ? currentStock : Math.max(0, currentStock - decrementAmount),
-                        opened: nextOpened,
+                        opened: getSauceOpenedValue(row),
                         openDate: getSauceOpenDateValue(row),
                         shelfLifeDays: getSauceShelfLifeValue(row),
                         useByDate: getSauceExpiryValue(row),
