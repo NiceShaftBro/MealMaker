@@ -79,9 +79,9 @@
             box-shadow: none;
             cursor: pointer;
             z-index: 25;
+            animation: spriteBreath 2.2s ease-in-out infinite alternate;
         }
         .secret-sprite-btn:hover {
-            transform: scale(1.04);
             box-shadow: none;
         }
         .secret-sprite-btn:active {
@@ -487,6 +487,10 @@
             60% { color: #2ec4b6; }
             80% { color: #4361ee; }
             100% { color: #c77dff; }
+        }
+        @keyframes spriteBreath {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.06); }
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
