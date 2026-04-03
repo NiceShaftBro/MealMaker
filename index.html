@@ -1575,6 +1575,23 @@
             return 'expiry-normal';
         }
 
+        function formatDaysUntilText(daysUntilExpiry) {
+            if (!Number.isFinite(daysUntilExpiry)) {
+                return '';
+            }
+
+            if (daysUntilExpiry < 0) {
+                const overdueDays = Math.abs(daysUntilExpiry);
+                return overdueDays === 1 ? '1 day ago' : `${overdueDays} days ago`;
+            }
+
+            if (daysUntilExpiry === 0) {
+                return 'today';
+            }
+
+            return daysUntilExpiry === 1 ? 'in 1 day' : `in ${daysUntilExpiry} days`;
+        }
+
         function showExpiringItems() {
             const secretView = document.getElementById('secretView');
             const resultsDiv = document.getElementById('results');
@@ -1613,7 +1630,7 @@
             let html = '<h2>⏳ Expiring Items</h2>';
 
             if (expiringItems.length === 0) {
-                html += '<p>No items with expiry dates found.</p>';
+                html += '<p>No items expiring in the next 14 days.</p>';
             } else {
                 expiringItems.forEach(entry => {
                     const expiryClass = getExpiryClass(entry.daysUntilExpiry);
@@ -1623,7 +1640,7 @@
                                 <div class="expiry-item-name">${entry.item}</div>
                                 <div class="stock-note">${entry.category}</div>
                             </div>
-                            <div class="expiry-item-date ${expiryClass}">${formatDate(entry.expiryDate)}</div>
+                            <div class="expiry-item-date ${expiryClass}">${formatDaysUntilText(entry.daysUntilExpiry)}</div>
                         </div>
                     `;
                 });
