@@ -1181,6 +1181,7 @@
             eggQuantity = 2;
             currentMeal = results;
             hideSecretView();
+            setStatusVisibility(false);
             displayResults(results);
         }
 
@@ -1424,7 +1425,7 @@
             const secretView = document.getElementById('secretView');
             const container = document.querySelector('.container');
             pendingBoughtAdjustments = {};
-            setStatusVisibility(true);
+            setStatusVisibility(!currentMeal);
             secretView.classList.remove('bought-mode');
             secretView.classList.remove('show');
             container.classList.remove('secret-open');
@@ -1719,6 +1720,7 @@
         function hideItemList() {
             const itemListDiv = document.getElementById('itemList');
             itemListDiv.classList.remove('show');
+            setStatusVisibility(!currentMeal);
             document.querySelector('.buttons-container').style.display = 'flex';
         }
 
