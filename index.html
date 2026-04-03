@@ -232,6 +232,22 @@
             transform: translateY(-1px);
             box-shadow: 0 9px 20px rgba(0,0,0,0.2);
         }
+        .result-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        .confirm-btn {
+            margin-top: 0;
+            min-width: 180px;
+        }
+        .stock-note {
+            display: block;
+            margin-top: 6px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #666;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -254,6 +270,7 @@
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         let spreadsheetData = [];
+        let currentMeal = null;
         
         // Google Apps Script web app endpoint
         const API_URL = 'https://script.google.com/macros/s/AKfycbx_ljmCd4ipExfblatWEnG7LGUGxNIytiWLOxb7QwDf5vELmnDgPAImoqLkjVk2_LuNOw/exec';
@@ -274,6 +291,17 @@
                 console.error('Invalid JSON response:', text);
                 throw new Error('API did not return valid JSON');
             }
+        }
+
+        function getStockValue(row) {
+            const rawStock = row?.Stock ?? row?.stock ?? '';
+
+            if (rawStock === '' || rawStock === null || rawStock === undefined) {
+                return 1;
+            }
+
+            const parsedStock = Number(rawStock);
+            return Number.isFinite(parsedStock) ? Math.max(0, parsedStock) : 1;
         }
 
         function loadSpreadsheet() {
@@ -325,15 +353,28 @@
                 const category = row['Category'];
                 const item = row['Food'];
                 const enabled = String(row['Enabled']).toUpperCase().trim();
+                const stock = getStockValue(row);
 
-                // Only include if enabled is TRUE (or true)
-                if (category && item && (enabled === 'TRUE' || enabled === 'true')) {
+                // Only include if enabled and currently in stock
+                if (category && item && (enabled === 'TRUE' || enabled === 'true') && stock > 0) {
                     if (!categories[category]) {
                         categories[category] = [];
                     }
-                    categories[category].push(item);
+                    categories[category].push({
+                        item,
+                        rowIndex: row['rowIndex'],
+                        category,
+                        enabled: true,
+                        stock,
+                        exclusions: row['Exclusions'] || ''
+                    });
                 }
             });
+
+            if (Object.keys(categories).length === 0) {
+                alert('No enabled items are currently in stock.');
+                return;
+            }
 
             const results = {};
             for (const category in categories) {
@@ -341,6 +382,7 @@
                 results[category] = items[Math.floor(Math.random() * items.length)];
             }
 
+            currentMeal = results;
             displayResults(results);
         }
 
@@ -349,16 +391,21 @@
             resultsDiv.innerHTML = '<div class="results-grid">';
             
             for (const category in results) {
-                const icon = getCategoryIcon(category, results[category]);
+                const selectedItem = results[category];
+                const icon = getCategoryIcon(category, selectedItem.item);
                 resultsDiv.innerHTML += `
                     <div class="result-item">
                         <div style="font-size: 2em; margin-bottom: 8px;">${icon}</div>
-                        ${results[category]}
+                        ${selectedItem.item}
+                        <span class="stock-note">In stock: ${selectedItem.stock}</span>
                     </div>
                 `;
             }
             
-            resultsDiv.innerHTML += '</div>';
+            resultsDiv.innerHTML += `</div>
+                <div class="result-actions">
+                    <button id="confirmMealBtn" class="save-btn confirm-btn" onclick="confirmMeal()">Confirm Meal</button>
+                </div>`;
             resultsDiv.classList.add('show');
         }
 
@@ -398,23 +445,24 @@
                 const enabled = String(row['Enabled']).toUpperCase().trim() === 'TRUE';
                 const id = row['id'];
                 const rowIndex = row['rowIndex'];
+                const stock = getStockValue(row);
 
                 if (!categories[category]) {
                     categories[category] = [];
                 }
-                categories[category].push({ item, enabled, id, rowIndex });
+                categories[category].push({ item, enabled, id, rowIndex, stock });
             });
 
             // Build HTML
             let html = '<h2>Manage Items</h2>';
             for (const category in categories) {
                 html += `<div class="item-group"><h3>${category}</h3>`;
-                categories[category].forEach(({ item, enabled, id, rowIndex }) => {
+                categories[category].forEach(({ item, enabled, id, rowIndex, stock }) => {
                     html += `
                         <div class="item-checkbox">
                             <label>
                                 <input type="checkbox" ${enabled ? 'checked' : ''} data-id="${id || ''}" data-row-index="${rowIndex || ''}" data-category="${category}" data-item="${item}">
-                                ${item}
+                                ${item} <span class="stock-note">Stock: ${stock}</span>
                             </label>
                         </div>
                     `;
@@ -434,6 +482,64 @@
             document.querySelector('.buttons-container').style.display = 'flex';
         }
 
+        async function confirmMeal() {
+            if (!currentMeal) {
+                alert('Please generate a meal first.');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmMealBtn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.style.opacity = '0.6';
+                confirmBtn.style.cursor = 'not-allowed';
+                confirmBtn.textContent = 'Confirming...';
+            }
+
+            try {
+                const updates = Object.values(currentMeal).map(selection => {
+                    const row = spreadsheetData.find(item => String(item.rowIndex) === String(selection.rowIndex));
+
+                    if (!row) {
+                        throw new Error(`Could not find ${selection.item} in the spreadsheet data.`);
+                    }
+
+                    const currentStock = getStockValue(row);
+                    return {
+                        id: row.id || '',
+                        rowIndex: row.rowIndex || '',
+                        item: row.Food,
+                        category: row.Category,
+                        enabled: String(row['Enabled']).toUpperCase().trim() === 'TRUE',
+                        stock: Math.max(0, currentStock - 1),
+                        exclusions: row.Exclusions || ''
+                    };
+                });
+
+                for (const update of updates) {
+                    await sendUpdateToAppsScript(update);
+                }
+
+                alert('Meal confirmed! Stock has been reduced by 1 for the selected items.');
+                currentMeal = null;
+                loadSpreadsheet();
+
+                if (confirmBtn) {
+                    confirmBtn.textContent = 'Confirmed ✓';
+                }
+            } catch (error) {
+                console.error('Error confirming meal:', error);
+                alert(`Error confirming meal: ${error.message}`);
+
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.style.opacity = '1';
+                    confirmBtn.style.cursor = 'pointer';
+                    confirmBtn.textContent = 'Confirm Meal';
+                }
+            }
+        }
+
         async function sendUpdateToAppsScript(update) {
             const payload = {
                 action: 'update',
@@ -442,6 +548,7 @@
                     Food: update.item,
                     Category: update.category,
                     Enabled: update.enabled,
+                    Stock: update.stock,
                     Exclusions: update.exclusions || ''
                 }
             };
@@ -480,6 +587,7 @@
                         item: row.Food,
                         category: row.Category,
                         enabled: newEnabled,
+                        stock: getStockValue(row),
                         exclusions: row.Exclusions || ''
                     });
                 }
