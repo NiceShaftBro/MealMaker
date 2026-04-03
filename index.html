@@ -248,6 +248,27 @@
             font-weight: 600;
             color: #666;
         }
+        .egg-quantity-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .qty-btn {
+            min-width: 36px;
+            padding: 6px 0;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 12px;
+            margin: 0;
+        }
+        .egg-qty-display {
+            min-width: 28px;
+            font-size: 1em;
+            font-weight: 700;
+            color: #333;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -271,6 +292,7 @@
     <script>
         let spreadsheetData = [];
         let currentMeal = null;
+        let eggQuantity = 2;
         
         // Google Apps Script web app endpoint
         const API_URL = 'https://script.google.com/macros/s/AKfycbx_ljmCd4ipExfblatWEnG7LGUGxNIytiWLOxb7QwDf5vELmnDgPAImoqLkjVk2_LuNOw/exec';
@@ -393,11 +415,19 @@
             for (const category in results) {
                 const selectedItem = results[category];
                 const icon = getCategoryIcon(category, selectedItem.item);
+                const isEggs = category === 'Protein' && selectedItem.item.toLowerCase().trim().includes('egg');
                 resultsDiv.innerHTML += `
                     <div class="result-item">
                         <div style="font-size: 2em; margin-bottom: 8px;">${icon}</div>
                         ${selectedItem.item}
                         <span class="stock-note">In stock: ${selectedItem.stock}</span>
+                        ${isEggs ? `
+                            <div class="egg-quantity-controls">
+                                <button class="qty-btn" onclick="changeEggQuantity(-1)">−</button>
+                                <span id="eggQtyDisplay" class="egg-qty-display">${eggQuantity}</span>
+                                <button class="qty-btn" onclick="changeEggQuantity(1)">+</button>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             }
@@ -407,6 +437,20 @@
                     <button id="confirmMealBtn" class="save-btn confirm-btn" onclick="confirmMeal()">Confirm Meal</button>
                 </div>`;
             resultsDiv.classList.add('show');
+        }
+
+        function changeEggQuantity(delta) {
+            if (!currentMeal || !currentMeal.Protein || !currentMeal.Protein.item.toLowerCase().trim().includes('egg')) {
+                return;
+            }
+
+            const maxQty = Math.max(1, currentMeal.Protein.stock);
+            eggQuantity = Math.min(maxQty, Math.max(1, eggQuantity + delta));
+
+            const display = document.getElementById('eggQtyDisplay');
+            if (display) {
+                display.textContent = eggQuantity;
+            }
         }
 
         function getCategoryIcon(category, itemName = '') {
@@ -505,13 +549,17 @@
                     }
 
                     const currentStock = getStockValue(row);
+                    const decrementAmount = selection.category === 'Protein' && selection.item.toLowerCase().trim().includes('egg')
+                        ? eggQuantity
+                        : 1;
+
                     return {
                         id: row.id || '',
                         rowIndex: row.rowIndex || '',
                         item: row.Food,
                         category: row.Category,
                         enabled: String(row['Enabled']).toUpperCase().trim() === 'TRUE',
-                        stock: Math.max(0, currentStock - 1),
+                        stock: Math.max(0, currentStock - decrementAmount),
                         exclusions: row.Exclusions || ''
                     };
                 });
