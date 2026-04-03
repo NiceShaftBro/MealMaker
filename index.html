@@ -813,8 +813,8 @@
         </div>
         <div id="appMessage" class="app-message"></div>
         <div class="buttons-container">
-            <button id="pickBtn" onclick="pickItems()" disabled>Make Dinner</button>
-            <button id="useExpiringBtn" class="use-expiring-btn" onclick="pickExpiringItems()" disabled>Use Expiring</button>
+            <button id="pickBtn" onclick="pickItems()" disabled>Loading...</button>
+            <button id="useExpiringBtn" class="use-expiring-btn" onclick="pickExpiringItems()" disabled>Loading...</button>
             <button onclick="refreshData()" style="background: linear-gradient(45deg, #4CAF50, #388E3C);">🔄 Refresh</button>
         </div>
         <div id="results" class="results"></div>
@@ -1268,8 +1268,19 @@
 
         function loadSpreadsheet() {
             const statusDiv = document.getElementById('fileStatus');
+            const pickBtn = document.getElementById('pickBtn');
+            const useExpiringBtn = document.getElementById('useExpiringBtn');
             statusDiv.textContent = 'Loading spreadsheet...';
             statusDiv.className = 'file-status loading';
+
+            if (pickBtn) {
+                pickBtn.disabled = true;
+                pickBtn.textContent = 'Loading...';
+            }
+            if (useExpiringBtn) {
+                useExpiringBtn.disabled = true;
+                useExpiringBtn.textContent = 'Loading...';
+            }
 
             sauceMetadataMap = new Map();
             const metaPromise = fetchApiJson(SAUCE_META_URL).catch(metaError => {
@@ -1297,8 +1308,14 @@
                     console.log('First row:', spreadsheetData[0]);
                     statusDiv.textContent = `✓ Spreadsheet loaded (${enabledCount} items enabled of ${totalCount})`;
                     statusDiv.className = 'file-status success';
-                    document.getElementById('pickBtn').disabled = false;
-                    document.getElementById('useExpiringBtn').disabled = false;
+                    if (pickBtn) {
+                        pickBtn.disabled = false;
+                        pickBtn.textContent = 'Make Dinner';
+                    }
+                    if (useExpiringBtn) {
+                        useExpiringBtn.disabled = false;
+                        useExpiringBtn.textContent = 'Use Expiring';
+                    }
                     statusDiv.onclick = showItemList;
                     refreshVisibleContent();
 
