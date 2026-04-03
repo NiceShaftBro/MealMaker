@@ -29,12 +29,12 @@
             position: relative;
             overflow: hidden;
             isolation: isolate;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 16px 24px 24px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            padding: 14px 20px 20px;
+            border-radius: 24px;
+            box-shadow: 0 18px 44px rgba(0,0,0,0.14);
+            border: 1px solid rgba(255, 255, 255, 0.28);
             max-width: 500px;
             width: 100%;
             text-align: center;
@@ -68,14 +68,15 @@
             z-index: 1;
         }
         h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: #2f3542;
+            margin: 2px 0 18px;
+            font-size: 2.1em;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.08);
         }
         .status-container {
-            margin: 0 0 12px 0;
+            margin: 0 0 10px 0;
             display: flex;
             justify-content: center;
         }
@@ -102,23 +103,23 @@
         }
         .buttons-container {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             justify-content: center;
-            margin: 22px 0 12px;
+            margin: 16px 0 10px;
             flex-wrap: wrap;
         }
         button {
-            background: linear-gradient(45deg, #FF6B6B, #EE5A52);
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
             color: white;
-            padding: 15px 30px;
+            padding: 13px 24px;
             border: none;
-            border-radius: 50px;
+            border-radius: 16px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
-            min-width: 160px;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.22s ease;
+            box-shadow: 0 6px 16px rgba(255, 107, 107, 0.25);
+            min-width: 148px;
         }
         button:hover:not(:disabled) {
             transform: translateY(-2px);
@@ -162,14 +163,14 @@
             align-items: center;
             justify-content: center;
             width: auto;
-            min-height: 120px;
-            padding: 16px 12px;
+            min-height: 118px;
+            padding: 14px 10px;
             background: white;
-            border-radius: 16px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+            border-radius: 18px;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.07);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             text-align: center;
-            font-size: 1.1em;
+            font-size: 1.08em;
             font-weight: 700;
             color: #333;
             box-sizing: border-box;
@@ -179,6 +180,13 @@
             box-shadow: 0 8px 20px rgba(0,0,0,0.12);
         }
         @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 12px 14px 16px;
+                border-radius: 20px;
+            }
             .container::before {
                 width: 86px;
                 height: 86px;
@@ -192,8 +200,21 @@
                 bottom: 4px;
                 opacity: 1;
             }
+            h1 {
+                font-size: 1.75em;
+                margin-bottom: 14px;
+            }
             .results {
                 margin-top: 6px;
+            }
+            .buttons-container {
+                gap: 10px;
+                margin: 14px 0 8px;
+            }
+            button {
+                min-width: 132px;
+                padding: 12px 18px;
+                border-radius: 14px;
             }
             .results-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
