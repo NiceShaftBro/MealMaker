@@ -88,38 +88,24 @@
             background: url('sanji-sprite.png') no-repeat center / contain;
             filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 8px rgba(118, 75, 162, 0.9));
         }
-        .secret-menu {
-            position: absolute;
-            right: 96px;
-            bottom: 92px;
-            width: 200px;
-            background: rgba(34, 34, 34, 0.96);
-            color: white;
+        .secret-view {
+            margin-top: 10px;
+            padding: 18px;
+            background: #fff;
             border-radius: 14px;
-            padding: 12px;
             display: none;
-            z-index: 30;
-            box-shadow: 0 12px 24px rgba(0,0,0,0.28);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border: 1px solid rgba(0,0,0,0.08);
             text-align: left;
         }
-        .secret-menu.show {
+        .secret-view.show {
             display: block;
             animation: fadeIn 0.18s ease-out;
         }
-        .secret-menu-title {
-            font-size: 0.95em;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #ffd166;
-        }
-        .secret-menu button {
-            width: 100%;
-            min-width: unset;
-            margin: 6px 0 0;
-            padding: 10px 12px;
-            border-radius: 10px;
-            font-size: 13px;
-            box-shadow: none;
+        .secret-view h2 {
+            margin: 0 0 12px 0;
+            font-size: 1.25em;
+            color: #333;
         }
         h1 {
             color: #333;
@@ -500,11 +486,8 @@
         </div>
         <div id="results" class="results"></div>
         <div id="itemList" class="item-list"></div>
-        <div id="secretMenu" class="secret-menu">
-            <div class="secret-menu-title">🍽️ Secret Menu</div>
-            <button onclick="showExpiringItems(); toggleSecretMenu(false);" style="background: linear-gradient(45deg, #ff9f1c, #f77f00);">⏳ Expiring</button>
-        </div>
-        <button id="secretSpriteBtn" class="secret-sprite-btn" onclick="toggleSecretMenu()" aria-label="Open secret menu" title="Secret menu"></button>
+        <div id="secretView" class="secret-view"></div>
+        <button id="secretSpriteBtn" class="secret-sprite-btn" onclick="showSecretView()" aria-label="Open secret menu" title="Secret menu"></button>
     </div>
 
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -752,15 +735,26 @@
             loadSpreadsheet();
         }
 
-        function toggleSecretMenu(forceState) {
-            const menu = document.getElementById('secretMenu');
-            if (!menu) return;
+        function showSecretView() {
+            const secretView = document.getElementById('secretView');
+            const resultsDiv = document.getElementById('results');
+            const itemListDiv = document.getElementById('itemList');
+            document.querySelector('.buttons-container').style.display = 'none';
+            resultsDiv.classList.remove('show');
+            itemListDiv.classList.remove('show');
 
-            const shouldShow = typeof forceState === 'boolean'
-                ? forceState
-                : !menu.classList.contains('show');
+            secretView.innerHTML = `
+                <h2>🍽️ Secret Menu</h2>
+                <button onclick="showExpiringItems()" style="background: linear-gradient(45deg, #ff9f1c, #f77f00);">⏳ Expiring</button>
+                <button onclick="hideSecretView()" style="background: linear-gradient(45deg, #6c757d, #5a6268); margin-top: 10px;">↩ Return</button>
+            `;
+            secretView.classList.add('show');
+        }
 
-            menu.classList.toggle('show', shouldShow);
+        function hideSecretView() {
+            const secretView = document.getElementById('secretView');
+            secretView.classList.remove('show');
+            document.querySelector('.buttons-container').style.display = 'flex';
         }
 
         async function toggleSauceOpened(categoryKey) {
@@ -1055,7 +1049,7 @@
         }
 
         function showExpiringItems() {
-            const itemListDiv = document.getElementById('itemList');
+            const secretView = document.getElementById('secretView');
             const resultsDiv = document.getElementById('results');
             document.querySelector('.buttons-container').style.display = 'none';
             resultsDiv.classList.remove('show');
@@ -1084,7 +1078,7 @@
                 .filter(Boolean)
                 .sort((a, b) => a.expiryDate - b.expiryDate);
 
-            let html = '<h2>Expiring Items</h2>';
+            let html = '<h2>⏳ Expiring Items</h2>';
 
             if (expiringItems.length === 0) {
                 html += '<p>No items with expiry dates found.</p>';
@@ -1103,22 +1097,10 @@
                 });
             }
 
-            html += '<button class="save-btn" onclick="hideItemList()">Close</button>';
-            itemListDiv.innerHTML = html;
-            itemListDiv.classList.add('show');
+            html += '<button class="save-btn" onclick="showSecretView()">↩ Return</button>';
+            secretView.innerHTML = html;
+            secretView.classList.add('show');
         }
-
-        document.addEventListener('click', (event) => {
-            const menu = document.getElementById('secretMenu');
-            const spriteBtn = document.getElementById('secretSpriteBtn');
-            if (!menu || !spriteBtn) return;
-
-            const clickedInsideMenu = menu.contains(event.target);
-            const clickedSprite = spriteBtn.contains(event.target);
-            if (!clickedInsideMenu && !clickedSprite) {
-                menu.classList.remove('show');
-            }
-        });
 
         async function confirmMeal() {
             if (!currentMeal) {
