@@ -294,7 +294,7 @@
         }
 
         function getStockValue(row) {
-            const rawStock = row?.Stock ?? row?.stock ?? '';
+            const rawStock = row?.Stock ?? row?.stock ?? row?.Exclusions ?? row?.exclusions ?? '';
 
             if (rawStock === '' || rawStock === null || rawStock === undefined) {
                 return 1;
@@ -549,7 +549,7 @@
                     Category: update.category,
                     Enabled: update.enabled,
                     Stock: update.stock,
-                    Exclusions: update.exclusions || ''
+                    Exclusions: update.stock
                 }
             };
 
