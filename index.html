@@ -1424,12 +1424,19 @@
         function hideSecretView() {
             const secretView = document.getElementById('secretView');
             const container = document.querySelector('.container');
+            const resultsDiv = document.getElementById('results');
             pendingBoughtAdjustments = {};
             setStatusVisibility(!currentMeal);
             secretView.classList.remove('bought-mode');
             secretView.classList.remove('show');
             container.classList.remove('secret-open');
             document.querySelector('.buttons-container').style.display = 'flex';
+
+            if (currentMeal) {
+                displayResults(currentMeal);
+            } else if (resultsDiv) {
+                resultsDiv.classList.remove('show');
+            }
         }
 
         async function toggleSauceOpened(categoryKey) {
