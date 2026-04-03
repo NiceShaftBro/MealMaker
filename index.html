@@ -417,7 +417,7 @@
             justify-content: space-between;
             align-items: center;
             gap: 12px;
-            padding: 12px;
+            padding: 12px 14px;
             margin: 8px 0;
             border-radius: 12px;
             background: #f8f9fb;
@@ -426,11 +426,14 @@
         }
         .shopping-list-meta {
             text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
         .shopping-item-name {
             font-weight: 800;
             color: #333;
-            font-size: 1.02em;
+            font-size: 1.04em;
         }
         .shopping-list-actions {
             display: flex;
@@ -454,10 +457,6 @@
         .shopping-status.low {
             background: rgba(240, 140, 0, 0.14);
             color: #f08c00;
-        }
-        .shopping-status.suggest {
-            background: rgba(102, 126, 234, 0.12);
-            color: #4c5fd5;
         }
         .item-list h2 {
             margin: 0 0 16px;
@@ -1571,10 +1570,9 @@
                 shoppingItems.forEach(entry => {
                     const statusLabel = entry.status === 'out' ? 'Out of Stock' : 'Low Stock';
                     const statusClass = entry.status === 'out' ? 'out' : 'low';
-                    const suggestionLabel = entry.packSize ? `Buy +${entry.packSize}` : 'Restock soon';
-                    const subtext = entry.status === 'out'
-                        ? `${entry.category} • Stock: ${entry.stock}`
-                        : `${entry.category} • Stock: ${entry.stock} • Low at ${entry.lowThreshold}`;
+                    const subtext = entry.packSize
+                        ? `${entry.category} • ${entry.stock} left • Buy +${entry.packSize}`
+                        : `${entry.category} • ${entry.stock} left`;
 
                     html += `
                         <div class="shopping-list-item">
@@ -1584,7 +1582,6 @@
                             </div>
                             <div class="shopping-list-actions">
                                 <span class="shopping-status ${statusClass}">${statusLabel}</span>
-                                <span class="shopping-status suggest">${suggestionLabel}</span>
                             </div>
                         </div>
                     `;
