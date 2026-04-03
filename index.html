@@ -950,6 +950,14 @@
                     statusDiv.className = 'file-status success';
                     document.getElementById('pickBtn').disabled = false;
                     statusDiv.onclick = showItemList;
+
+                    const secretView = document.getElementById('secretView');
+                    if (secretView && secretView.classList.contains('show')) {
+                        const currentTitle = secretView.querySelector('h2')?.textContent || '';
+                        if (currentTitle.includes('Secret Menu')) {
+                            showSecretView();
+                        }
+                    }
                 })
                 .catch(error => {
                     console.error('Error fetching spreadsheet:', error);
@@ -958,6 +966,14 @@
                     statusDiv.style.backgroundColor = '#f8d7da';
                     statusDiv.style.color = '#721c24';
                     statusDiv.style.display = 'block';
+
+                    const secretView = document.getElementById('secretView');
+                    if (secretView && secretView.classList.contains('show')) {
+                        const currentTitle = secretView.querySelector('h2')?.textContent || '';
+                        if (currentTitle.includes('Secret Menu')) {
+                            showSecretView();
+                        }
+                    }
                 });
         }
 
