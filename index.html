@@ -76,6 +76,9 @@
             background: url('sanji-sprite.png') no-repeat center / contain;
             filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 8px rgba(118, 75, 162, 0.9));
         }
+        .container.secret-open .secret-sprite-btn {
+            display: none;
+        }
         .secret-view {
             margin-top: 10px;
             padding: 20px 18px 16px;
@@ -741,9 +744,11 @@
             const secretView = document.getElementById('secretView');
             const resultsDiv = document.getElementById('results');
             const itemListDiv = document.getElementById('itemList');
+            const container = document.querySelector('.container');
             document.querySelector('.buttons-container').style.display = 'none';
             resultsDiv.classList.remove('show');
             itemListDiv.classList.remove('show');
+            container.classList.add('secret-open');
 
             secretView.innerHTML = `
                 <h2>🍽️ Secret Menu</h2>
@@ -759,7 +764,9 @@
 
         function hideSecretView() {
             const secretView = document.getElementById('secretView');
+            const container = document.querySelector('.container');
             secretView.classList.remove('show');
+            container.classList.remove('secret-open');
             document.querySelector('.buttons-container').style.display = 'flex';
         }
 
