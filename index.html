@@ -307,6 +307,13 @@
             border-radius: 12px;
             margin: 0;
         }
+        .qty-btn.plus-btn {
+            background: linear-gradient(45deg, #4CAF50, #388E3C);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.28);
+        }
+        .qty-btn.minus-btn {
+            background: linear-gradient(45deg, #FF6B6B, #EE5A52);
+        }
         .egg-qty-display {
             min-width: 28px;
             font-size: 1em;
@@ -467,9 +474,9 @@
                         <span class="stock-note">In stock: ${selectedItem.stock}</span>
                         ${isEggs ? `
                             <div class="egg-quantity-controls">
-                                <button class="qty-btn" onclick="changeEggQuantity(-1)">−</button>
+                                <button class="qty-btn minus-btn" onclick="changeEggQuantity(-1)">−</button>
                                 <span id="eggQtyDisplay" class="egg-qty-display">${eggQuantity}</span>
-                                <button class="qty-btn" onclick="changeEggQuantity(1)">+</button>
+                                <button class="qty-btn plus-btn" onclick="changeEggQuantity(1)">+</button>
                             </div>
                         ` : ''}
                     </div>
