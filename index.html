@@ -1634,10 +1634,14 @@
             const itemListDiv = document.getElementById('itemList');
             const buttonsContainer = document.getElementById('buttons-container');
             const resultsDiv = document.getElementById('results');
+            const secretView = document.getElementById('secretView');
+            const container = document.querySelector('.container');
 
             // Hide buttons and results
             document.querySelector('.buttons-container').style.display = 'none';
             resultsDiv.classList.remove('show');
+            secretView.classList.remove('show');
+            container.classList.remove('secret-open');
 
             // Group items by category
             const categories = {};
