@@ -70,21 +70,23 @@
             cursor: pointer;
             z-index: 25;
             outline: none !important;
-            transition: none !important;
+            transition: filter 0.18s ease, transform 0.18s ease !important;
             -webkit-tap-highlight-color: transparent;
             appearance: none;
             -webkit-appearance: none;
+            filter: none;
         }
         .secret-sprite-btn:hover,
         .secret-sprite-btn:focus,
         .secret-sprite-btn:active,
         .secret-sprite-btn:focus-visible {
-            transform: none !important;
+            transform: scale(1.03) !important;
             box-shadow: none !important;
             outline: none !important;
             border: none !important;
             border-radius: 0 !important;
             background: url('sanji-sprite.png') no-repeat center / contain;
+            filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 8px rgba(255, 209, 102, 0.85));
         }
         .secret-menu {
             position: absolute;
