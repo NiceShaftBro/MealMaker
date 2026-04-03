@@ -458,6 +458,10 @@
             background: rgba(240, 140, 0, 0.14);
             color: #f08c00;
         }
+        .shopping-status.expiring {
+            background: rgba(255, 107, 107, 0.14);
+            color: #d62828;
+        }
         .item-list h2 {
             margin: 0 0 16px;
             font-size: 1.25em;
@@ -934,11 +938,21 @@
                     const stock = getStockValue(row);
                     const lowThreshold = getLowStockThreshold(row);
                     const packSize = Number(getPackSizeValue(row));
+                    const expiryDate = getItemExpiryDate(row);
+                    const daysUntilExpiry = expiryDate ? getDaysUntil(expiryDate) : null;
                     const isOutOfStock = stock <= 0;
                     const isLowStock = !isOutOfStock && stock <= lowThreshold;
+                    const isExpiringSoon = Number.isFinite(daysUntilExpiry) && daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
 
-                    if (!isOutOfStock && !isLowStock) {
+                    if (!isOutOfStock && !isLowStock && !isExpiringSoon) {
                         return null;
+                    }
+
+                    let status = 'low';
+                    if (isOutOfStock) {
+                        status = 'out';
+                    } else if (isExpiringSoon) {
+                        status = 'expiring';
                     }
 
                     return {
@@ -947,13 +961,20 @@
                         stock,
                         lowThreshold,
                         packSize: Number.isFinite(packSize) && packSize > 0 ? Math.round(packSize) : null,
-                        status: isOutOfStock ? 'out' : 'low'
+                        status,
+                        expiryDate,
+                        daysUntilExpiry
                     };
                 })
                 .filter(Boolean)
                 .sort((a, b) => {
-                    const statusOrder = (a.status === 'out' ? 0 : 1) - (b.status === 'out' ? 0 : 1);
+                    const rank = status => ({ out: 0, expiring: 1, low: 2 }[status] ?? 3);
+                    const statusOrder = rank(a.status) - rank(b.status);
                     if (statusOrder !== 0) return statusOrder;
+
+                    if (a.status === 'expiring' && b.status === 'expiring') {
+                        return a.expiryDate - b.expiryDate;
+                    }
 
                     const stockOrder = a.stock - b.stock;
                     if (stockOrder !== 0) return stockOrder;
@@ -1568,11 +1589,20 @@
                 html += '<p>Nothing is low or out of stock right now.</p>';
             } else {
                 shoppingItems.forEach(entry => {
-                    const statusLabel = entry.status === 'out' ? 'Out of Stock' : 'Low Stock';
-                    const statusClass = entry.status === 'out' ? 'out' : 'low';
-                    const subtext = entry.packSize
+                    let statusLabel = 'Low Stock';
+                    let statusClass = 'low';
+                    let subtext = entry.packSize
                         ? `${entry.category} • ${entry.stock} left • Buy +${entry.packSize}`
                         : `${entry.category} • ${entry.stock} left`;
+
+                    if (entry.status === 'out') {
+                        statusLabel = 'Out of Stock';
+                        statusClass = 'out';
+                    } else if (entry.status === 'expiring') {
+                        statusLabel = 'Expires soon';
+                        statusClass = 'expiring';
+                        subtext = `${entry.category} • Expires ${formatDate(entry.expiryDate)}`;
+                    }
 
                     html += `
                         <div class="shopping-list-item">
