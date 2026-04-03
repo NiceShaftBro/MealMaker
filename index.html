@@ -296,29 +296,62 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 10px;
+            margin-top: 12px;
         }
         .qty-btn {
-            min-width: 36px;
-            padding: 6px 0;
+            min-width: 38px;
+            width: 38px;
+            height: 38px;
+            padding: 0;
             font-size: 18px;
             font-weight: 700;
-            border-radius: 12px;
+            border-radius: 50%;
             margin: 0;
+            min-width: unset;
+            background: #f8f9fb;
+            color: #2f3542;
+            border: 1px solid rgba(0, 0, 0, 0.10);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.18s ease;
         }
-        .qty-btn.plus-btn {
-            background: linear-gradient(45deg, #4CAF50, #388E3C);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.28);
+        .qty-btn:hover:not(:disabled) {
+            background: #eef1f5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+            transform: translateY(-1px);
         }
-        .qty-btn.minus-btn {
-            background: linear-gradient(45deg, #FF6B6B, #EE5A52);
+        .qty-btn:active:not(:disabled) {
+            background: #e6eaf0;
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
         .egg-qty-display {
-            min-width: 28px;
-            font-size: 1em;
-            font-weight: 700;
-            color: #333;
+            min-width: 32px;
+            text-align: center;
+            font-size: 1.08em;
+            font-weight: 800;
+            color: #2f3542;
+            line-height: 1;
+        }
+        .bomboclat-note {
+            margin-top: 12px;
+            font-size: 1.35em;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            animation: rainbowFlash 0.7s linear infinite;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        }
+        @keyframes rainbowFlash {
+            0% { color: #ff4d6d; }
+            20% { color: #ff9f1c; }
+            40% { color: #ffd60a; }
+            60% { color: #2ec4b6; }
+            80% { color: #4361ee; }
+            100% { color: #c77dff; }
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -344,6 +377,8 @@
         let spreadsheetData = [];
         let currentMeal = null;
         let eggQuantity = 2;
+        let bomboclatActive = false;
+        let bomboclatTimeoutId = null;
         
         // Google Apps Script web app endpoint
         const API_URL = 'https://script.google.com/macros/s/AKfycbx_ljmCd4ipExfblatWEnG7LGUGxNIytiWLOxb7QwDf5vELmnDgPAImoqLkjVk2_LuNOw/exec';
@@ -455,6 +490,12 @@
                 results[category] = items[Math.floor(Math.random() * items.length)];
             }
 
+            bomboclatActive = false;
+            if (bomboclatTimeoutId) {
+                clearTimeout(bomboclatTimeoutId);
+                bomboclatTimeoutId = null;
+            }
+            eggQuantity = 2;
             currentMeal = results;
             displayResults(results);
         }
@@ -472,13 +513,15 @@
                         <div style="font-size: 2em; margin-bottom: 8px;">${icon}</div>
                         ${selectedItem.item}
                         <span class="stock-note">In stock: ${selectedItem.stock}</span>
-                        ${isEggs ? `
+                        ${isEggs ? (bomboclatActive ? `
+                            <div class="bomboclat-note">Bomboclat!</div>
+                        ` : `
                             <div class="egg-quantity-controls">
-                                <button class="qty-btn minus-btn" onclick="changeEggQuantity(-1)">−</button>
+                                <button class="qty-btn" onclick="changeEggQuantity(-1)">−</button>
                                 <span id="eggQtyDisplay" class="egg-qty-display">${eggQuantity}</span>
-                                <button class="qty-btn plus-btn" onclick="changeEggQuantity(1)">+</button>
+                                <button class="qty-btn" onclick="changeEggQuantity(1)">+</button>
                             </div>
-                        ` : ''}
+                        `) : ''}
                     </div>
                 `;
             }
@@ -491,17 +534,35 @@
         }
 
         function changeEggQuantity(delta) {
-            if (!currentMeal || !currentMeal.Protein || !currentMeal.Protein.item.toLowerCase().trim().includes('egg')) {
+            if (!currentMeal || !currentMeal.Protein || !currentMeal.Protein.item.toLowerCase().trim().includes('egg') || bomboclatActive) {
                 return;
             }
 
             const maxQty = Math.max(1, currentMeal.Protein.stock);
-            eggQuantity = Math.min(maxQty, Math.max(1, eggQuantity + delta));
+            const nextQuantity = Math.min(maxQty, Math.max(1, eggQuantity + delta));
 
-            const display = document.getElementById('eggQtyDisplay');
-            if (display) {
-                display.textContent = eggQuantity;
+            if (nextQuantity > 8) {
+                bomboclatActive = true;
+                eggQuantity = 2;
+                displayResults(currentMeal);
+
+                if (bomboclatTimeoutId) {
+                    clearTimeout(bomboclatTimeoutId);
+                }
+
+                bomboclatTimeoutId = setTimeout(() => {
+                    bomboclatActive = false;
+                    eggQuantity = 2;
+                    bomboclatTimeoutId = null;
+                    if (currentMeal) {
+                        displayResults(currentMeal);
+                    }
+                }, 5000);
+                return;
             }
+
+            eggQuantity = nextQuantity;
+            displayResults(currentMeal);
         }
 
         function getCategoryIcon(category, itemName = '') {
