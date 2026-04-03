@@ -467,9 +467,10 @@
                 const item = row['Food'];
                 const enabled = String(row['Enabled']).toUpperCase().trim();
                 const stock = getStockValue(row);
+                const ignoreStock = String(category).toLowerCase().trim() === 'sauce';
 
                 // Only include if enabled and currently in stock
-                if (category && item && (enabled === 'TRUE' || enabled === 'true') && stock > 0) {
+                if (category && item && (enabled === 'TRUE' || enabled === 'true') && (ignoreStock || stock > 0)) {
                     if (!categories[category]) {
                         categories[category] = [];
                     }
@@ -518,7 +519,7 @@
                     <div class="result-item">
                         <div style="font-size: 2em; margin-bottom: 8px;">${icon}</div>
                         ${selectedItem.item}
-                        <span class="stock-note">In stock: ${selectedItem.stock}</span>
+                        ${category === 'Sauce' ? '' : `<span class="stock-note">In stock: ${selectedItem.stock}</span>`}
                         ${isEggs ? (bomboclatActive ? `
                             <div class="bomboclat-note">Bomboclat!</div>
                         ` : `
@@ -629,7 +630,7 @@
                         <div class="item-checkbox">
                             <label>
                                 <input type="checkbox" ${enabled ? 'checked' : ''} data-id="${id || ''}" data-row-index="${rowIndex || ''}" data-category="${category}" data-item="${item}">
-                                ${item} <span class="stock-note">Stock: ${stock}</span>
+                                ${item} ${category === 'Sauce' ? '' : `<span class="stock-note">Stock: ${stock}</span>`}
                             </label>
                         </div>
                     `;
@@ -672,9 +673,9 @@
                     }
 
                     const currentStock = getStockValue(row);
-                    const decrementAmount = selection.category === 'Protein' && selection.item.toLowerCase().trim().includes('egg')
-                        ? eggQuantity
-                        : 1;
+                    const decrementAmount = selection.category === 'Sauce'
+                        ? 0
+                        : (selection.category === 'Protein' && selection.item.toLowerCase().trim().includes('egg') ? eggQuantity : 1);
 
                     return {
                         id: row.id || '',
