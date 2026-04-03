@@ -339,11 +339,6 @@
             margin-top: 10px;
             flex-wrap: wrap;
         }
-        .sauce-open-question {
-            color: #666;
-            font-size: 0.82em;
-            font-weight: 600;
-        }
         .open-toggle-btn {
             min-width: 0;
             width: auto;
@@ -812,7 +807,6 @@
                         ${isSauce ? renderSauceMeta(selectedItem) : ''}
                         ${isSauce && !isOpenedValue(selectedItem.opened) ? `
                             <div class="sauce-open-controls">
-                                <span class="sauce-open-question">Open sauce?</span>
                                 <button class="open-toggle-btn" onclick="toggleSauceOpened('${category}')">
                                     Open Sauce
                                 </button>
