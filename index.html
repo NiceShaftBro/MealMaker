@@ -412,6 +412,53 @@
         .expiry-item-date {
             font-weight: 700;
         }
+        .shopping-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 12px;
+            background: #f8f9fb;
+            border: 1px solid rgba(0,0,0,0.05);
+            flex-wrap: wrap;
+        }
+        .shopping-list-meta {
+            text-align: left;
+        }
+        .shopping-item-name {
+            font-weight: 800;
+            color: #333;
+            font-size: 1.02em;
+        }
+        .shopping-list-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        .shopping-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 0.78em;
+            font-weight: 800;
+        }
+        .shopping-status.out {
+            background: rgba(214, 40, 40, 0.12);
+            color: #d62828;
+        }
+        .shopping-status.low {
+            background: rgba(240, 140, 0, 0.14);
+            color: #f08c00;
+        }
+        .shopping-status.suggest {
+            background: rgba(102, 126, 234, 0.12);
+            color: #4c5fd5;
+        }
         .item-list h2 {
             margin: 0 0 16px;
             font-size: 1.25em;
@@ -848,6 +895,75 @@
             return 1;
         }
 
+        function getLowStockThreshold(row) {
+            const explicitCandidates = [
+                row?.LowStockAt,
+                row?.['Low Stock At'],
+                row?.lowStockAt,
+                row?.LowStock,
+                row?.['Low Stock'],
+                row?.lowStock,
+                row?.ReorderAt,
+                row?.['Reorder At'],
+                row?.reorderAt
+            ];
+
+            for (const candidate of explicitCandidates) {
+                const parsed = Number(candidate);
+                if (Number.isFinite(parsed) && parsed >= 0) {
+                    return Math.round(parsed);
+                }
+            }
+
+            const packSize = Number(getPackSizeValue(row));
+            if (Number.isFinite(packSize) && packSize > 1) {
+                return Math.max(1, Math.ceil(packSize / 2));
+            }
+
+            return 1;
+        }
+
+        function getShoppingListItems() {
+            return spreadsheetData
+                .filter(row => {
+                    const item = String(row?.Food ?? '').trim();
+                    const category = String(row?.Category ?? '').trim();
+                    const enabled = String(row?.Enabled ?? '').toUpperCase().trim() === 'TRUE';
+                    return item !== '' && category !== '' && enabled;
+                })
+                .map(row => {
+                    const stock = getStockValue(row);
+                    const lowThreshold = getLowStockThreshold(row);
+                    const packSize = Number(getPackSizeValue(row));
+                    const isOutOfStock = stock <= 0;
+                    const isLowStock = !isOutOfStock && stock <= lowThreshold;
+
+                    if (!isOutOfStock && !isLowStock) {
+                        return null;
+                    }
+
+                    return {
+                        item: row.Food,
+                        category: row.Category,
+                        stock,
+                        lowThreshold,
+                        packSize: Number.isFinite(packSize) && packSize > 0 ? Math.round(packSize) : null,
+                        status: isOutOfStock ? 'out' : 'low'
+                    };
+                })
+                .filter(Boolean)
+                .sort((a, b) => {
+                    const statusOrder = (a.status === 'out' ? 0 : 1) - (b.status === 'out' ? 0 : 1);
+                    if (statusOrder !== 0) return statusOrder;
+
+                    const stockOrder = a.stock - b.stock;
+                    if (stockOrder !== 0) return stockOrder;
+
+                    const categoryOrder = String(a.category).localeCompare(String(b.category));
+                    return categoryOrder !== 0 ? categoryOrder : String(a.item).localeCompare(String(b.item));
+                });
+        }
+
         function finishMealSelection(results) {
             bomboclatActive = false;
             if (bomboclatTimeoutId) {
@@ -912,6 +1028,8 @@
                 const currentTitle = secretView.querySelector('h2')?.textContent || '';
                 if (currentTitle.includes('I Bought')) {
                     showBoughtItems();
+                } else if (currentTitle.includes('Shopping List')) {
+                    showShoppingList();
                 } else if (currentTitle.includes('Expiring Items')) {
                     showExpiringItems();
                 } else if (currentTitle.includes('Secret Menu')) {
@@ -1043,6 +1161,9 @@
             const itemListDiv = document.getElementById('itemList');
             const container = document.querySelector('.container');
             const hasLoadedData = spreadsheetData.length > 0;
+            const shoppingButtonAttrs = hasLoadedData
+                ? 'style="background: linear-gradient(45deg, #3a86ff, #4361ee);"'
+                : 'disabled title="Load spreadsheet first"';
             const boughtButtonAttrs = hasLoadedData
                 ? 'style="background: linear-gradient(45deg, #2a9d8f, #1d7f73);"'
                 : 'disabled title="Load spreadsheet first"';
@@ -1056,6 +1177,7 @@
                 <div class="secret-menu-options">
                     <button onclick="showExpiringItems()" style="background: linear-gradient(45deg, #ff9f1c, #f77f00);">⏳ Expiring</button>
                     <button onclick="pickExpiringItems()" style="background: linear-gradient(45deg, #7b2cbf, #5a189a);">🍽️ Use Expiring</button>
+                    <button onclick="showShoppingList()" ${shoppingButtonAttrs}>🛍️ Shopping List</button>
                     <button onclick="showBoughtItems()" ${boughtButtonAttrs}>🛒 I Bought</button>
                 </div>
                 <div class="secret-return-wrap">
@@ -1421,6 +1543,60 @@
                     <button class="secret-return-btn" onclick="showSecretView()">↩ Return</button>
                 </div>
             `;
+            secretView.innerHTML = html;
+            secretView.classList.add('show');
+        }
+
+        function showShoppingList() {
+            if (spreadsheetData.length === 0) {
+                alert('Please wait for spreadsheet to load');
+                return;
+            }
+
+            const secretView = document.getElementById('secretView');
+            const resultsDiv = document.getElementById('results');
+            const itemListDiv = document.getElementById('itemList');
+            const container = document.querySelector('.container');
+            document.querySelector('.buttons-container').style.display = 'none';
+            resultsDiv.classList.remove('show');
+            itemListDiv.classList.remove('show');
+            container.classList.add('secret-open');
+
+            const shoppingItems = getShoppingListItems();
+            let html = '<h2>🛍️ Shopping List</h2>';
+
+            if (shoppingItems.length === 0) {
+                html += '<p>Nothing is low or out of stock right now.</p>';
+            } else {
+                shoppingItems.forEach(entry => {
+                    const statusLabel = entry.status === 'out' ? 'Out of Stock' : 'Low Stock';
+                    const statusClass = entry.status === 'out' ? 'out' : 'low';
+                    const suggestionLabel = entry.packSize ? `Buy +${entry.packSize}` : 'Restock soon';
+                    const subtext = entry.status === 'out'
+                        ? `${entry.category} • Stock: ${entry.stock}`
+                        : `${entry.category} • Stock: ${entry.stock} • Low at ${entry.lowThreshold}`;
+
+                    html += `
+                        <div class="shopping-list-item">
+                            <div class="shopping-list-meta">
+                                <div class="shopping-item-name">${entry.item}</div>
+                                <div class="stock-note">${subtext}</div>
+                            </div>
+                            <div class="shopping-list-actions">
+                                <span class="shopping-status ${statusClass}">${statusLabel}</span>
+                                <span class="shopping-status suggest">${suggestionLabel}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `
+                <div class="secret-return-wrap">
+                    <button class="secret-return-btn" onclick="showSecretView()">↩ Return</button>
+                </div>
+            `;
+
             secretView.innerHTML = html;
             secretView.classList.add('show');
         }
