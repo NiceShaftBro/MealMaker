@@ -557,9 +557,22 @@
             });
         }
 
+        function computeUseByFromOpenDate(openDateValue, shelfLifeValue) {
+            const openDate = parseDateValue(openDateValue);
+            const shelfLifeDays = Number(shelfLifeValue);
+
+            if (!openDate || !Number.isFinite(shelfLifeDays)) {
+                return null;
+            }
+
+            const computed = new Date(openDate);
+            computed.setDate(computed.getDate() + shelfLifeDays);
+            return computed;
+        }
+
         function renderSauceMeta(selectedItem) {
             const opened = isOpenedValue(selectedItem.opened);
-            const expiryDate = parseDateValue(selectedItem.expiry);
+            const expiryDate = parseDateValue(selectedItem.expiry) || (opened ? computeUseByFromOpenDate(selectedItem.openDate, selectedItem.shelfLifeDays) : null);
             let openedClass = opened ? 'opened-yes' : 'opened-no';
             let openedText = opened ? 'Opened' : 'Unopened';
             let expiryText = 'Expiry: Unknown';
@@ -674,6 +687,13 @@
             selection.opened = nextOpened;
             if (!selection.openDate) {
                 selection.openDate = todayText;
+            }
+            if (!selection.expiry) {
+                const computedUseBy = computeUseByFromOpenDate(selection.openDate, selection.shelfLifeDays);
+                if (computedUseBy) {
+                    selection.expiry = formatDate(computedUseBy);
+                    selection.useByDate = selection.expiry;
+                }
             }
 
             try {
