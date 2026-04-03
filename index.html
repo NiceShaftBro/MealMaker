@@ -1745,10 +1745,15 @@
                     categories[category].push(row);
                 });
 
+            const hasPendingChanges = Object.keys(pendingBoughtAdjustments).length > 0;
+            const resetButtonStyle = hasPendingChanges
+                ? 'margin: 0; background: linear-gradient(45deg, #e63946, #c1121f); color: #fff; border-color: rgba(255,255,255,0.22);'
+                : 'margin: 0;';
+
             let html = `
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
                     <h2 style="margin: 0;">🛒 I Bought</h2>
-                    <button class="secret-return-btn" style="margin: 0;" onclick="resetBoughtItems()">Reset</button>
+                    <button class="secret-return-btn" style="${resetButtonStyle}" onclick="resetBoughtItems()">Reset</button>
                 </div>
             `;
 
