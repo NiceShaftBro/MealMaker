@@ -691,7 +691,6 @@
                 const computedUseBy = computeUseByFromOpenDate(selection.openDate, selection.shelfLifeDays);
                 if (computedUseBy) {
                     selection.expiry = formatDate(computedUseBy);
-                    selection.useByDate = selection.expiry;
                 }
             }
 
@@ -706,7 +705,7 @@
                     opened: 'TRUE',
                     openDate: selection.openDate || todayText,
                     shelfLifeDays: selection.shelfLifeDays || '',
-                    useByDate: selection.expiry || selection.useByDate || '',
+                    useByDate: '',
                     exclusions: selection.exclusions || ''
                 });
 
@@ -988,7 +987,7 @@
                         opened: getSauceOpenedValue(row),
                         openDate: getSauceOpenDateValue(row),
                         shelfLifeDays: getSauceShelfLifeValue(row),
-                        useByDate: getSauceExpiryValue(row),
+                        useByDate: isSauce ? '' : getSauceExpiryValue(row),
                         exclusions: row.Exclusions || ''
                     };
                 });
@@ -1062,7 +1061,7 @@
                     Opened: openedValue,
                     'Open date': normalizedCategory === 'sauce' ? (update.openDate ?? '') : getSauceOpenDateValue(update),
                     ShelfLifeDays: normalizedCategory === 'sauce' ? (update.shelfLifeDays ?? '') : getSauceShelfLifeValue(update),
-                    UseByDate: normalizedCategory === 'sauce' ? (update.useByDate ?? '') : getSauceExpiryValue(update)
+                    UseByDate: normalizedCategory === 'sauce' ? '' : getSauceExpiryValue(update)
                 }
             };
 
