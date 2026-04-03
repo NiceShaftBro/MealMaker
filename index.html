@@ -940,11 +940,15 @@
                     const packSize = Number(getPackSizeValue(row));
                     const expiryDate = getItemExpiryDate(row);
                     const daysUntilExpiry = expiryDate ? getDaysUntil(expiryDate) : null;
+                    const isSauce = String(row?.Category ?? '').toLowerCase().trim() === 'sauce';
                     const isOutOfStock = stock <= 0;
                     const isLowStock = !isOutOfStock && stock <= lowThreshold;
                     const isExpiringSoon = Number.isFinite(daysUntilExpiry) && daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
+                    const shouldInclude = isSauce
+                        ? (isOutOfStock || isExpiringSoon)
+                        : (isOutOfStock || isLowStock || isExpiringSoon);
 
-                    if (!isOutOfStock && !isLowStock && !isExpiringSoon) {
+                    if (!shouldInclude) {
                         return null;
                     }
 
