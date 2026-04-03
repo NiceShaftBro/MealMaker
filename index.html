@@ -803,13 +803,14 @@
                 const icon = getCategoryIcon(category, selectedItem.item);
                 const isEggs = category === 'Protein' && selectedItem.item.toLowerCase().trim().includes('egg');
                 const isSauce = String(category).toLowerCase().trim() === 'sauce';
+                const sauceHasStock = Number(selectedItem.stock) > 0;
                 resultsDiv.innerHTML += `
                     <div class="result-item">
                         <div style="font-size: 2em; margin-bottom: 8px;">${icon}</div>
                         ${selectedItem.item}
                         ${category === 'Sauce' ? '' : `<span class="stock-note">${selectedItem.stock > 0 ? `In stock: ${selectedItem.stock}` : 'Out of Stock'}</span>`}
-                        ${isSauce ? renderSauceMeta(selectedItem) : ''}
-                        ${isSauce && !isOpenedValue(selectedItem.opened) ? `
+                        ${isSauce && sauceHasStock ? renderSauceMeta(selectedItem) : ''}
+                        ${isSauce && sauceHasStock && !isOpenedValue(selectedItem.opened) ? `
                             <div class="sauce-open-controls">
                                 <button class="open-toggle-btn" onclick="toggleSauceOpened('${category}')">
                                     Open Sauce
