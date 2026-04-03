@@ -462,6 +462,10 @@
             background: rgba(255, 107, 107, 0.14);
             color: #d62828;
         }
+        .shopping-expiry-text {
+            color: #d62828;
+            font-weight: 700;
+        }
         .item-list h2 {
             margin: 0 0 16px;
             font-size: 1.25em;
@@ -1608,7 +1612,7 @@
                     } else if (entry.status === 'expiring') {
                         statusLabel = 'Expires soon';
                         statusClass = 'expiring';
-                        subtext = `${entry.category} • Expires ${formatDate(entry.expiryDate)}`;
+                        subtext = `${entry.category} • <span class="shopping-expiry-text">Expires ${formatDate(entry.expiryDate)}</span>`;
                     }
 
                     html += `
