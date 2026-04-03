@@ -67,13 +67,16 @@
             box-shadow: none;
             cursor: pointer;
             z-index: 25;
+            outline: none;
+            transition: none;
         }
-        .secret-sprite-btn:hover {
-            transform: scale(1.04);
-            box-shadow: none;
-        }
+        .secret-sprite-btn:hover,
+        .secret-sprite-btn:focus,
         .secret-sprite-btn:active {
-            transform: scale(0.98);
+            transform: none;
+            box-shadow: none;
+            outline: none;
+            background: url('sanji-sprite.png') no-repeat center / contain;
         }
         .secret-menu {
             position: absolute;
