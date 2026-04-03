@@ -2066,12 +2066,12 @@
                     const displayStock = currentStock + pendingAmount;
 
                     html += `
-                        <div class="bought-item-row">
+                        <div class="bought-item-row" onclick="changeBoughtAmount('${rowKey}', ${step})" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); changeBoughtAmount('${rowKey}', ${step}); }">
                             <div class="bought-item-meta">
                                 <div class="bought-item-name">${row.Food}${pendingAmount > 0 ? ` <span class="pending-addition">(+${pendingAmount})</span>` : ''}</div>
                             </div>
                             <div class="bought-controls">
-                                <button class="qty-btn step-btn step-plus" onclick="changeBoughtAmount('${rowKey}', ${step})">+${step}</button>
+                                <button class="qty-btn step-btn step-plus" onclick="event.stopPropagation(); changeBoughtAmount('${rowKey}', ${step})">+${step}</button>
                             </div>
                         </div>
                     `;
