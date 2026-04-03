@@ -518,10 +518,24 @@
 
                 for (const update of updates) {
                     await sendUpdateToAppsScript(update);
+
+                    const row = spreadsheetData.find(item => String(item.rowIndex) === String(update.rowIndex));
+                    if (row) {
+                        row.Stock = update.stock;
+                        row.Exclusions = update.stock;
+                    }
                 }
 
+                Object.keys(currentMeal).forEach(category => {
+                    const selection = currentMeal[category];
+                    const updatedRow = spreadsheetData.find(item => String(item.rowIndex) === String(selection.rowIndex));
+                    if (updatedRow) {
+                        currentMeal[category].stock = getStockValue(updatedRow);
+                    }
+                });
+
+                displayResults(currentMeal);
                 alert('Meal confirmed! Stock has been reduced by 1 for the selected items.');
-                currentMeal = null;
                 loadSpreadsheet();
 
                 if (confirmBtn) {
