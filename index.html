@@ -80,7 +80,8 @@
             background: url('Sprites/sanji-sprite.png') no-repeat center / contain;
             filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 8px rgba(118, 75, 162, 0.9));
         }
-        .container.secret-open .secret-sprite-btn {
+        .container.secret-open .secret-sprite-btn,
+        .container.item-list-open .secret-sprite-btn {
             display: none;
         }
         .container.results-open:not(.secret-open) .secret-sprite-btn {
@@ -645,24 +646,74 @@
         .item-checkbox {
             margin: 6px 0;
         }
-        .item-checkbox label {
+        .item-checkbox-row {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 10px;
-            cursor: pointer;
             background: #f8f9fb;
             padding: 8px 10px;
             border-radius: 10px;
             transition: background 0.2s ease;
+            flex-wrap: nowrap;
         }
-        .item-checkbox label:hover {
+        .item-checkbox-row:hover {
             background: #e7f1ff;
         }
-        .item-checkbox input {
+        .item-checkbox-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1 1 auto;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .item-checkbox-main input {
             margin: 0;
             width: 16px;
             height: 16px;
             accent-color: #28a745;
+            flex: 0 0 auto;
+        }
+        .item-name-text {
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .manage-inline-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .manage-stock-value {
+            font-size: 0.82em;
+            font-weight: 700;
+            color: #5a6270;
+            min-width: 64px;
+            text-align: center;
+        }
+        .manage-stock-btn {
+            min-width: 28px;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            margin: 0;
+            border-radius: 50%;
+            font-size: 16px;
+            font-weight: 800;
+            color: #2f3542;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.12);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .manage-stock-btn:hover:not(:disabled) {
+            background: #eef1f5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+            transform: none;
         }
         .save-btn {
             background: linear-gradient(45deg, #4CAF50, #388E3C);
@@ -855,6 +906,7 @@
         let bomboclatCanTrigger = true;
         let sauceMetadataMap = new Map();
         let pendingBoughtAdjustments = {};
+        let pendingManageStockChanges = {};
         let appMessageTimeoutId = null;
         
         // Google Apps Script web app endpoint
@@ -1705,6 +1757,7 @@
             container.classList.remove('results-open');
             secretView.classList.remove('show');
             container.classList.remove('secret-open');
+            container.classList.add('item-list-open');
 
             // Group items by category
             const categories = {};
@@ -1715,11 +1768,14 @@
                 const id = row['id'];
                 const rowIndex = row['rowIndex'];
                 const stock = getStockValue(row);
+                const pendingStock = Object.prototype.hasOwnProperty.call(pendingManageStockChanges, String(rowIndex))
+                    ? pendingManageStockChanges[String(rowIndex)]
+                    : stock;
 
                 if (!categories[category]) {
                     categories[category] = [];
                 }
-                categories[category].push({ item, enabled, id, rowIndex, stock });
+                categories[category].push({ item, enabled, id, rowIndex, stock: pendingStock });
             });
 
             // Build HTML
@@ -1729,10 +1785,17 @@
                 categories[category].forEach(({ item, enabled, id, rowIndex, stock }) => {
                     html += `
                         <div class="item-checkbox">
-                            <label>
-                                <input type="checkbox" ${enabled ? 'checked' : ''} data-id="${id || ''}" data-row-index="${rowIndex || ''}" data-category="${category}" data-item="${item}">
-                                ${item} ${category === 'Sauce' ? '' : `<span class="stock-note">Stock: ${stock}</span>`}
-                            </label>
+                            <div class="item-checkbox-row">
+                                <label class="item-checkbox-main">
+                                    <input type="checkbox" ${enabled ? 'checked' : ''} data-id="${id || ''}" data-row-index="${rowIndex || ''}" data-category="${category}" data-item="${item}">
+                                    <span class="item-name-text">${item}</span>
+                                </label>
+                                <div class="manage-inline-controls">
+                                    <span class="manage-stock-value">${stock}</span>
+                                    <button type="button" class="manage-stock-btn" onclick="changeManageStock('${rowIndex || ''}', -1)">−</button>
+                                    <button type="button" class="manage-stock-btn" onclick="changeManageStock('${rowIndex || ''}', 1)">+</button>
+                                </div>
+                            </div>
                         </div>
                     `;
                 });
@@ -1748,12 +1811,48 @@
         function hideItemList() {
             const itemListDiv = document.getElementById('itemList');
             const container = document.querySelector('.container');
+            pendingManageStockChanges = {};
             itemListDiv.classList.remove('show');
+            container?.classList.remove('item-list-open');
             setStatusVisibility(!currentMeal);
             if (currentMeal) {
                 container?.classList.add('results-open');
             }
             document.querySelector('.buttons-container').style.display = 'flex';
+        }
+
+        function changeManageStock(rowIndex, delta) {
+            const key = String(rowIndex || '');
+            if (!key) {
+                return;
+            }
+
+            const itemListDiv = document.getElementById('itemList');
+            const previousScroll = itemListDiv ? itemListDiv.scrollTop : 0;
+            const row = spreadsheetData.find(item => String(item.rowIndex) === key);
+            if (!row) {
+                return;
+            }
+
+            const originalStock = getStockValue(row);
+            const currentStock = Object.prototype.hasOwnProperty.call(pendingManageStockChanges, key)
+                ? pendingManageStockChanges[key]
+                : originalStock;
+            const nextStock = Math.max(0, currentStock + delta);
+
+            if (nextStock === originalStock) {
+                delete pendingManageStockChanges[key];
+            } else {
+                pendingManageStockChanges[key] = nextStock;
+            }
+
+            showItemList();
+            requestAnimationFrame(() => {
+                const updatedItemList = document.getElementById('itemList');
+                if (updatedItemList) {
+                    updatedItemList.scrollTop = previousScroll;
+                }
+            });
         }
 
         function getExpiryClass(daysUntilExpiry) {
@@ -2228,7 +2327,12 @@
                 const newEnabled = cb.checked;
                 const row = spreadsheetData.find(r => (id ? r.id == id : rowIndex ? String(r.rowIndex) === String(rowIndex) : r.Food === item && r.Category === category));
                 const currentEnabled = row ? String(row['Enabled']).toUpperCase().trim() === 'TRUE' : false;
-                if (row && currentEnabled !== newEnabled) {
+                const currentStock = row ? getStockValue(row) : 0;
+                const newStock = row && Object.prototype.hasOwnProperty.call(pendingManageStockChanges, String(row.rowIndex))
+                    ? pendingManageStockChanges[String(row.rowIndex)]
+                    : currentStock;
+
+                if (row && (currentEnabled !== newEnabled || currentStock !== newStock)) {
                     if (!row.rowIndex || Number.isNaN(Number(row.rowIndex))) {
                         console.warn('Skipping checkbox update without valid rowIndex:', row);
                         return;
@@ -2239,7 +2343,11 @@
                         item: row.Food,
                         category: row.Category,
                         enabled: newEnabled,
-                        stock: getStockValue(row),
+                        stock: newStock,
+                        opened: getSauceOpenedValue(row),
+                        openDate: getSauceOpenDateValue(row),
+                        shelfLifeDays: getSauceShelfLifeValue(row),
+                        useByDate: getSauceExpiryValue(row),
                         exclusions: row.Exclusions || ''
                     });
                 }
@@ -2294,6 +2402,7 @@
             }, 2000);
 
             // Refresh data
+            pendingManageStockChanges = {};
             loadSpreadsheet();
             hideItemList();
         }
