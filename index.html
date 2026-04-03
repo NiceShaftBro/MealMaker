@@ -442,11 +442,6 @@
         }
 
         function getStockValue(row) {
-            const normalizedCategory = String(row?.Category ?? row?.category ?? '').toLowerCase().trim();
-            if (normalizedCategory === 'sauce') {
-                return 1;
-            }
-
             const rawStock = row?.Stock ?? row?.stock ?? row?.Exclusions ?? row?.exclusions ?? '';
 
             if (rawStock === '' || rawStock === null || rawStock === undefined) {
@@ -472,6 +467,14 @@
 
         function getSauceExpiryValue(row) {
             return row?.UseByDate ?? row?.['Use By Date'] ?? row?.Expiry ?? row?.expiry ?? row?.['Expiry Date'] ?? row?.['expiry date'] ?? row?.H ?? '';
+        }
+
+        function getSauceOpenDateValue(row) {
+            return row?.['Open date'] ?? row?.['Open Date'] ?? row?.openDate ?? row?.F ?? '';
+        }
+
+        function getSauceShelfLifeValue(row) {
+            return row?.ShelfLifeDays ?? row?.['Shelf Life Days'] ?? row?.G ?? '';
         }
 
         function isOpenedValue(value) {
@@ -582,8 +585,21 @@
                                 if (!key) return;
                                 sauceMetadataMap.set(key, {
                                     opened: getSauceOpenedValue(metaRow),
-                                    expiry: getSauceExpiryValue(metaRow)
+                                    expiry: getSauceExpiryValue(metaRow),
+                                    openDate: getSauceOpenDateValue(metaRow),
+                                    shelfLifeDays: getSauceShelfLifeValue(metaRow)
                                 });
+                            });
+
+                            spreadsheetData = spreadsheetData.map(row => {
+                                const meta = sauceMetadataMap.get(makeItemKey(row?.Food, row?.Category)) || {};
+                                return {
+                                    ...row,
+                                    Opened: meta.opened ?? row.Opened,
+                                    UseByDate: meta.expiry ?? row.UseByDate,
+                                    ['Open date']: meta.openDate ?? row['Open date'],
+                                    ShelfLifeDays: meta.shelfLifeDays ?? row.ShelfLifeDays
+                                };
                             });
                         }
                     } catch (metaError) {
@@ -630,10 +646,9 @@
                 const item = row['Food'];
                 const enabled = String(row['Enabled']).toUpperCase().trim();
                 const stock = getStockValue(row);
-                const ignoreStock = String(category).toLowerCase().trim() === 'sauce';
 
                 // Only include if enabled and currently in stock
-                if (category && item && (enabled === 'TRUE' || enabled === 'true') && (ignoreStock || stock > 0)) {
+                if (category && item && (enabled === 'TRUE' || enabled === 'true') && stock > 0) {
                     if (!categories[category]) {
                         categories[category] = [];
                     }
@@ -845,9 +860,18 @@
                     }
 
                     const currentStock = getStockValue(row);
-                    const decrementAmount = selection.category === 'Sauce'
+                    const isSauce = String(selection.category).toLowerCase().trim() === 'sauce';
+                    const decrementAmount = isSauce
                         ? 0
                         : (selection.category === 'Protein' && selection.item.toLowerCase().trim().includes('egg') ? eggQuantity : 1);
+
+                    let nextOpened = getSauceOpenedValue(row);
+                    if (isSauce && !isOpenedValue(nextOpened)) {
+                        const shouldOpen = window.confirm(`${selection.item} is currently unopened. Do you want to open it now?`);
+                        if (shouldOpen) {
+                            nextOpened = true;
+                        }
+                    }
 
                     return {
                         id: row.id || '',
@@ -855,7 +879,11 @@
                         item: row.Food,
                         category: row.Category,
                         enabled: String(row['Enabled']).toUpperCase().trim() === 'TRUE',
-                        stock: selection.category === 'Sauce' ? 1 : Math.max(0, currentStock - decrementAmount),
+                        stock: isSauce ? currentStock : Math.max(0, currentStock - decrementAmount),
+                        opened: nextOpened,
+                        openDate: getSauceOpenDateValue(row),
+                        shelfLifeDays: getSauceShelfLifeValue(row),
+                        useByDate: getSauceExpiryValue(row),
                         exclusions: row.Exclusions || ''
                     };
                 });
@@ -911,7 +939,7 @@
             }
 
             const normalizedCategory = category.toLowerCase().trim();
-            const stockValue = normalizedCategory === 'sauce' ? 1 : update.stock;
+            const stockValue = update.stock;
 
             const payload = {
                 action: 'update',
@@ -921,7 +949,11 @@
                     Category: category,
                     Enabled: update.enabled,
                     Stock: stockValue,
-                    Exclusions: stockValue
+                    Exclusions: stockValue,
+                    Opened: normalizedCategory === 'sauce' ? isOpenedValue(update.opened) : getSauceOpenedValue(update),
+                    'Open date': normalizedCategory === 'sauce' ? (update.openDate ?? '') : getSauceOpenDateValue(update),
+                    ShelfLifeDays: normalizedCategory === 'sauce' ? (update.shelfLifeDays ?? '') : getSauceShelfLifeValue(update),
+                    UseByDate: normalizedCategory === 'sauce' ? (update.useByDate ?? '') : getSauceExpiryValue(update)
                 }
             };
 
