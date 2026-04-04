@@ -503,49 +503,6 @@
             background: rgba(58, 134, 255, 0.12);
             color: #2f5fd0;
         }
-        .app-update-prompt {
-            display: none;
-            margin: 0 0 12px;
-            padding: 12px 14px;
-            border-radius: 12px;
-            background: rgba(58, 134, 255, 0.12);
-            color: #2f5fd0;
-            text-align: left;
-        }
-        .app-update-prompt.show {
-            display: block;
-            animation: fadeIn 0.18s ease-out;
-        }
-        .app-update-prompt strong {
-            display: block;
-            margin-bottom: 4px;
-        }
-        .app-update-prompt p {
-            margin: 0;
-            font-size: 0.9em;
-            line-height: 1.4;
-        }
-        .app-update-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-        .app-update-actions button {
-            min-width: 128px;
-            margin: 0;
-            padding: 10px 16px;
-            font-size: 14px;
-        }
-        .app-update-now-btn {
-            background: linear-gradient(45deg, #3a86ff, #4361ee);
-            box-shadow: 0 6px 16px rgba(67, 97, 238, 0.22);
-        }
-        .app-update-later-btn {
-            background: linear-gradient(45deg, #6c757d, #5a6268);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-        }
         .pull-refresh-indicator {
             position: fixed;
             top: 10px;
@@ -1370,14 +1327,6 @@
         </div>
         <div id="appMessage" class="app-message"></div>
         <div id="pullRefreshIndicator" class="pull-refresh-indicator">↓ Pull to refresh</div>
-        <div id="appUpdatePrompt" class="app-update-prompt">
-            <strong>Update available</strong>
-            <p id="appUpdatePromptText">A newer version of the app is ready.</p>
-            <div class="app-update-actions">
-                <button id="appUpdateNowBtn" type="button" class="app-update-now-btn" onclick="applyAppUpdate()">Update Now</button>
-                <button type="button" class="app-update-later-btn" onclick="dismissAppUpdatePrompt()">Later</button>
-            </div>
-        </div>
         <div class="buttons-container">
             <button id="pickBtn" onclick="pickItems()" disabled>Loading...</button>
             <button id="useExpiringBtn" class="use-expiring-btn" onclick="pickExpiringItems()" disabled>Loading...</button>
@@ -1402,7 +1351,6 @@
         let manageStockUseTimesTen = false;
         let pendingDeleteSelections = {};
         let showBinConfirmPrompt = false;
-        let pendingServiceWorker = null;
         let hasRefreshedForUpdate = false;
         let pullRefreshStartY = 0;
         let pullRefreshDistance = 0;
@@ -1412,9 +1360,6 @@
         let currentItemListMode = 'manage';
         let appMessageTimeoutId = null;
         
-        const APP_VERSION = '2026-04-05d';
-        const APP_VERSION_URL = './version.json?v=20260405d';
-
         // Google Apps Script web app endpoint
         const API_URL = 'https://script.google.com/macros/s/AKfycbx_ljmCd4ipExfblatWEnG7LGUGxNIytiWLOxb7QwDf5vELmnDgPAImoqLkjVk2_LuNOw/exec';
         // Read-only metadata source that includes Opened/UseByDate columns
@@ -1461,89 +1406,6 @@
             }, duration);
         }
 
-        function showAppUpdatePrompt(message = 'A newer version of the app is ready.') {
-            const prompt = document.getElementById('appUpdatePrompt');
-            const promptText = document.getElementById('appUpdatePromptText');
-            const updateBtn = document.getElementById('appUpdateNowBtn');
-            if (!prompt || !promptText) {
-                return;
-            }
-
-            promptText.textContent = message;
-            prompt.classList.add('show');
-
-            if (updateBtn) {
-                updateBtn.disabled = false;
-                updateBtn.textContent = 'Update Now';
-            }
-        }
-
-        function dismissAppUpdatePrompt() {
-            const prompt = document.getElementById('appUpdatePrompt');
-            if (prompt) {
-                prompt.classList.remove('show');
-            }
-        }
-
-        async function checkForAppUpdate({ silent = true } = {}) {
-            try {
-                const response = await fetch(APP_VERSION_URL, { cache: 'no-store' });
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const versionInfo = await response.json();
-                const latestVersion = String(versionInfo?.version || '').trim();
-
-                if (latestVersion && latestVersion !== APP_VERSION) {
-                    showAppUpdatePrompt(`A new version (${latestVersion}) is ready. Tap Update Now to refresh the app.`);
-                    return true;
-                }
-
-                if (!silent) {
-                    showAppMessage('You already have the latest version.', 'success', 2200);
-                }
-            } catch (error) {
-                console.log('App version check failed:', error);
-                if (!silent) {
-                    showAppMessage('Could not check for updates right now.', 'error', 2600);
-                }
-            }
-
-            return false;
-        }
-
-        async function applyAppUpdate() {
-            const updateBtn = document.getElementById('appUpdateNowBtn');
-            if (updateBtn) {
-                updateBtn.disabled = true;
-                updateBtn.textContent = 'Updating...';
-            }
-
-            if (pendingServiceWorker) {
-                pendingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
-                return;
-            }
-
-            try {
-                const registration = await navigator.serviceWorker.getRegistration();
-                if (registration) {
-                    await registration.update();
-                }
-
-                if ('caches' in window) {
-                    const cacheNames = await caches.keys();
-                    await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
-                }
-            } catch (error) {
-                console.log('Apply app update fallback:', error);
-            }
-
-            const refreshUrl = new URL(window.location.href);
-            refreshUrl.searchParams.set('updatedAt', Date.now().toString());
-            window.location.replace(refreshUrl.toString());
-        }
-
         function getActiveScrollContainer() {
             const secretView = document.getElementById('secretView');
             const itemList = document.getElementById('itemList');
@@ -1582,7 +1444,6 @@
 
         function triggerPullRefresh() {
             updatePullRefreshUI(0, false);
-            dismissAppUpdatePrompt();
             showAppMessage('Refreshing...', 'info', 1800);
             loadSpreadsheet();
 
@@ -1595,8 +1456,6 @@
                     }
                 });
             }
-
-            checkForAppUpdate({ silent: true });
         }
 
         function setupPullToRefresh() {
@@ -3586,13 +3445,12 @@
                 try {
                     const registration = await navigator.serviceWorker.register('./service-worker.js?v=20260405d');
 
-                    const promptForAppUpdate = currentRegistration => {
+                    const applyWaitingUpdate = currentRegistration => {
                         if (!currentRegistration?.waiting) {
                             return;
                         }
 
-                        pendingServiceWorker = currentRegistration.waiting;
-                        showAppUpdatePrompt('A new version is ready. Tap Update Now to refresh the app.');
+                        currentRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
                     };
 
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -3612,14 +3470,13 @@
 
                         installingWorker.addEventListener('statechange', () => {
                             if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                promptForAppUpdate(registration);
+                                applyWaitingUpdate(registration);
                             }
                         });
                     });
 
                     await registration.update();
-                    promptForAppUpdate(registration);
-                    await checkForAppUpdate({ silent: true });
+                    applyWaitingUpdate(registration);
                     console.log('✓ Service Worker registered successfully:', registration);
                 } catch (error) {
                     console.log('Service Worker registration failed:', error);
