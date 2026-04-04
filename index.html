@@ -2859,7 +2859,7 @@
             container.classList.add('item-list-open', 'bin-list-mode');
             const deleteButtonLabel = isConfirming
                 ? 'Awaiting confirmation...'
-                : (selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected');
+                : 'Delete';
 
             let html = isConfirming ? '' : `
                 <div class="bin-list-sticky-header">
@@ -2945,7 +2945,7 @@
                 const selectedCount = Object.keys(pendingDeleteSelections).length;
                 deleteBtn.disabled = selectedCount === 0;
                 deleteBtn.classList.toggle('armed', selectedCount > 0);
-                deleteBtn.textContent = selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected';
+                deleteBtn.textContent = 'Delete';
             }
         }
 
@@ -3645,7 +3645,7 @@
                 if (deleteBtn) {
                     const selectedCount = Object.keys(pendingDeleteSelections).length;
                     deleteBtn.disabled = selectedCount === 0;
-                    deleteBtn.textContent = selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected';
+                    deleteBtn.textContent = 'Delete';
                 }
                 if (resetBtn) {
                     resetBtn.disabled = false;
