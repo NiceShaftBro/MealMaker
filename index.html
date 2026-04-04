@@ -546,6 +546,31 @@
             background: linear-gradient(45deg, #6c757d, #5a6268);
             box-shadow: 0 6px 16px rgba(0,0,0,0.12);
         }
+        .pull-refresh-indicator {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1200;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.96);
+            color: #2f5fd0;
+            font-size: 0.88em;
+            font-weight: 800;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            backdrop-filter: blur(8px);
+        }
+        .pull-refresh-indicator.show {
+            display: inline-flex;
+            animation: fadeIn 0.18s ease-out;
+        }
+        .container.pull-refresh-active {
+            transition: transform 0.12s ease-out;
+        }
         .buttons-container {
             display: flex;
             gap: 15px;
@@ -1344,6 +1369,7 @@
             <div id="fileStatus" class="file-status loading">Loading spreadsheet...</div>
         </div>
         <div id="appMessage" class="app-message"></div>
+        <div id="pullRefreshIndicator" class="pull-refresh-indicator">↓ Pull to refresh</div>
         <div id="appUpdatePrompt" class="app-update-prompt">
             <strong>Update available</strong>
             <p id="appUpdatePromptText">A newer version of the app is ready.</p>
@@ -1378,6 +1404,10 @@
         let showBinConfirmPrompt = false;
         let pendingServiceWorker = null;
         let hasRefreshedForUpdate = false;
+        let pullRefreshStartY = 0;
+        let pullRefreshDistance = 0;
+        let pullRefreshActive = false;
+        const PULL_REFRESH_THRESHOLD = 80;
         let lastItemListSource = 'home';
         let currentItemListMode = 'manage';
         let appMessageTimeoutId = null;
@@ -1388,7 +1418,10 @@
         const SAUCE_META_URL = 'https://opensheet.elk.sh/12KGA-cvI-pvEpkJZlyH17pBq99Ocb1Q-v0Vx9jBim4I/Sheet1';
 
         // Load data on page load
-        window.addEventListener('load', loadSpreadsheet);
+        window.addEventListener('load', () => {
+            loadSpreadsheet();
+            setupPullToRefresh();
+        });
 
         async function fetchApiJson(url, options = {}) {
             const response = await fetch(url, options);
@@ -1462,6 +1495,124 @@
             }
 
             window.location.reload();
+        }
+
+        function getActiveScrollContainer() {
+            const secretView = document.getElementById('secretView');
+            const itemList = document.getElementById('itemList');
+
+            if (secretView?.classList.contains('show')) {
+                return secretView;
+            }
+
+            if (itemList?.classList.contains('show')) {
+                return itemList;
+            }
+
+            return document.querySelector('.container');
+        }
+
+        function updatePullRefreshUI(distance = 0, readyToRefresh = false) {
+            const indicator = document.getElementById('pullRefreshIndicator');
+            const container = document.querySelector('.container');
+            if (!indicator || !container) {
+                return;
+            }
+
+            if (distance <= 0) {
+                indicator.classList.remove('show');
+                indicator.textContent = '↓ Pull to refresh';
+                container.classList.remove('pull-refresh-active');
+                container.style.transform = '';
+                return;
+            }
+
+            indicator.classList.add('show');
+            indicator.textContent = readyToRefresh ? '↻ Release to refresh' : '↓ Pull to refresh';
+            container.classList.add('pull-refresh-active');
+            container.style.transform = `translateY(${Math.min(28, distance * 0.35)}px)`;
+        }
+
+        function triggerPullRefresh() {
+            updatePullRefreshUI(0, false);
+            dismissAppUpdatePrompt();
+            showAppMessage('Refreshing...', 'info', 1800);
+            loadSpreadsheet();
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration().then(registration => {
+                    if (registration) {
+                        registration.update().catch(error => {
+                            console.log('Service Worker refresh check failed:', error);
+                        });
+                    }
+                });
+            }
+        }
+
+        function setupPullToRefresh() {
+            if (setupPullToRefresh.initialized) {
+                return;
+            }
+            setupPullToRefresh.initialized = true;
+
+            document.addEventListener('touchstart', event => {
+                if (event.touches.length !== 1) {
+                    return;
+                }
+
+                const scroller = getActiveScrollContainer();
+                const atTop = !scroller || typeof scroller.scrollTop !== 'number' || scroller.scrollTop <= 0;
+                if (!atTop) {
+                    pullRefreshActive = false;
+                    return;
+                }
+
+                pullRefreshStartY = event.touches[0].clientY;
+                pullRefreshDistance = 0;
+                pullRefreshActive = true;
+            }, { passive: true });
+
+            document.addEventListener('touchmove', event => {
+                if (!pullRefreshActive || event.touches.length !== 1) {
+                    return;
+                }
+
+                const currentY = event.touches[0].clientY;
+                const scroller = getActiveScrollContainer();
+                const atTop = !scroller || typeof scroller.scrollTop !== 'number' || scroller.scrollTop <= 0;
+                const distance = Math.max(0, currentY - pullRefreshStartY);
+
+                if (!atTop || distance <= 0) {
+                    updatePullRefreshUI(0, false);
+                    return;
+                }
+
+                pullRefreshDistance = distance;
+                updatePullRefreshUI(distance, distance >= PULL_REFRESH_THRESHOLD);
+
+                if (distance > 8) {
+                    event.preventDefault();
+                }
+            }, { passive: false });
+
+            const finalizePullRefresh = () => {
+                if (!pullRefreshActive) {
+                    return;
+                }
+
+                const shouldRefresh = pullRefreshDistance >= PULL_REFRESH_THRESHOLD;
+                pullRefreshActive = false;
+                pullRefreshDistance = 0;
+                updatePullRefreshUI(0, false);
+
+                if (shouldRefresh) {
+                    triggerPullRefresh();
+                }
+            };
+
+            document.addEventListener('touchend', finalizePullRefresh);
+            document.addEventListener('touchcancel', finalizePullRefresh);
         }
 
         function getStockValue(row) {
@@ -1945,7 +2096,7 @@
 
                     console.log('Loaded data:', spreadsheetData);
                     console.log('First row:', spreadsheetData[0]);
-                    statusDiv.textContent = '✓ Spreadsheet Loaded • Update Test';
+                    statusDiv.textContent = '✓ Spreadsheet Loaded';
                     statusDiv.className = 'file-status success';
                     if (pickBtn) {
                         pickBtn.disabled = false;
