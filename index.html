@@ -151,28 +151,38 @@
             padding-right: 0;
             box-sizing: border-box;
         }
+        .side-sprite-decor,
         .secret-sprite-btn {
-            all: unset;
             position: absolute;
-            right: 8px;
             bottom: 4px;
             width: 120px;
             height: 120px;
             display: block;
-            background: url('Sprites/sanji-sprite.png') no-repeat center / contain;
             padding: 0;
             margin: 0;
             box-shadow: none !important;
             border: none !important;
             border-radius: 0 !important;
-            cursor: pointer;
             z-index: 25;
+            filter: none;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+        }
+        .side-sprite-decor {
+            left: -4px;
+            pointer-events: none;
+            background-image: url('Sprites/companion-sprite.png?v=20260405a');
+        }
+        .secret-sprite-btn {
+            right: -12px;
+            background: url('Sprites/sanji-sprite.png?v=3') no-repeat center / contain;
+            cursor: pointer;
             outline: none !important;
             transition: filter 0.18s ease, transform 0.18s ease !important;
             -webkit-tap-highlight-color: transparent;
             appearance: none;
             -webkit-appearance: none;
-            filter: none;
         }
         .secret-sprite-btn:hover,
         .secret-sprite-btn:focus,
@@ -183,19 +193,27 @@
             outline: none !important;
             border: none !important;
             border-radius: 0 !important;
-            background: url('Sprites/sanji-sprite.png') no-repeat center / contain;
+            background: url('Sprites/sanji-sprite.png?v=3') no-repeat center / contain;
             filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 8px rgba(118, 75, 162, 0.9));
         }
+        .container.secret-open .side-sprite-decor,
         .container.secret-open .secret-sprite-btn,
+        .container.item-list-open .side-sprite-decor,
         .container.item-list-open .secret-sprite-btn {
             display: none;
         }
+        .container.results-open:not(.secret-open) .side-sprite-decor,
         .container.results-open:not(.secret-open) .secret-sprite-btn {
             width: 76px;
             height: 76px;
-            right: 10px;
             bottom: 2px;
             transform: none !important;
+        }
+        .container.results-open:not(.secret-open) .side-sprite-decor {
+            left: 4px;
+        }
+        .container.results-open:not(.secret-open) .secret-sprite-btn {
+            right: -8px;
         }
         .container.results-open:not(.secret-open) .secret-sprite-btn:hover,
         .container.results-open:not(.secret-open) .secret-sprite-btn:focus,
@@ -710,6 +728,23 @@
             .container.item-list-open .status-container {
                 padding-left: 0;
                 padding-right: 0;
+            }
+            .side-sprite-decor,
+            .secret-sprite-btn {
+                width: 88px;
+                height: 88px;
+                bottom: 2px;
+            }
+            .side-sprite-decor {
+                left: -2px;
+            }
+            .secret-sprite-btn {
+                right: -8px;
+            }
+            .container.results-open:not(.secret-open) .side-sprite-decor,
+            .container.results-open:not(.secret-open) .secret-sprite-btn {
+                width: 62px;
+                height: 62px;
             }
             .secret-view {
                 padding: 14px 12px 12px;
@@ -1601,6 +1636,7 @@
         <div id="results" class="results"></div>
         <div id="itemList" class="item-list"></div>
         <div id="secretView" class="secret-view"></div>
+        <div id="sideSpriteDecor" class="side-sprite-decor" aria-hidden="true"></div>
         <button id="secretSpriteBtn" class="secret-sprite-btn" onclick="showSecretView()" aria-label="Open secret menu" title="Secret menu"></button>
     </div>
 
