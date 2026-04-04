@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Dinner Decider">
-    <link rel="manifest" href="PWA/manifest-v2.json?v=20260405">
+    <link rel="manifest" href="PWA/manifest-v2.json?v=20260405c">
     <link rel="icon" type="image/png" sizes="192x192" href="Sprites/sanji-icon-192.png?v=3">
     <link rel="apple-touch-icon" href="Sprites/sanji-apple-touch-icon.png?v=3">
     <title>Dinner Decider</title>
@@ -1945,7 +1945,7 @@
 
                     console.log('Loaded data:', spreadsheetData);
                     console.log('First row:', spreadsheetData[0]);
-                    statusDiv.textContent = '✓ Spreadsheet Loaded';
+                    statusDiv.textContent = '✓ Spreadsheet Loaded • Update Test';
                     statusDiv.className = 'file-status success';
                     if (pickBtn) {
                         pickBtn.disabled = false;
@@ -3384,7 +3384,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
                 try {
-                    const registration = await navigator.serviceWorker.register('./service-worker.js?v=20260405b');
+                    const registration = await navigator.serviceWorker.register('./service-worker.js?v=20260405c');
 
                     const promptForAppUpdate = currentRegistration => {
                         if (!currentRegistration?.waiting) {
