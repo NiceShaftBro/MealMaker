@@ -1250,12 +1250,14 @@
             justify-content: space-between;
             align-items: center;
             gap: 12px;
+            min-height: 74px;
             padding: 12px 14px;
             margin: 8px 0;
             border-radius: 12px;
             background: #f8f9fb;
             border: 1px solid rgba(0,0,0,0.05);
             flex-wrap: wrap;
+            box-sizing: border-box;
         }
         .shopping-list-meta {
             text-align: left;
@@ -1278,10 +1280,14 @@
         .shopping-status {
             display: inline-flex;
             align-items: center;
-            padding: 5px 10px;
+            justify-content: center;
+            min-height: 28px;
+            padding: 6px 12px;
             border-radius: 999px;
             font-size: 0.78em;
             font-weight: 800;
+            line-height: 1;
+            box-sizing: border-box;
         }
         .shopping-status.out {
             background: rgba(214, 40, 40, 0.12);
@@ -3307,14 +3313,13 @@
                 html += '<p>Nothing is low or out of stock right now.</p>';
             } else {
                 shoppingItems.forEach(entry => {
-                    let statusLabel = 'Low Stock';
+                    let statusLabel = `Low Stock: ${entry.stock}`;
                     let statusClass = 'low';
-                    let subtext = `Low Stock: ${entry.stock}`;
+                    let subtext = '';
 
                     if (entry.status === 'out') {
                         statusLabel = 'Out of Stock';
                         statusClass = 'out';
-                        subtext = 'Low Stock: 0';
                     } else if (entry.status === 'expiring') {
                         statusLabel = 'Expires soon';
                         statusClass = 'expiring';
@@ -3326,7 +3331,7 @@
                         <div class="shopping-list-item">
                             <div class="shopping-list-meta">
                                 <div class="shopping-item-name">${entry.item}</div>
-                                <div class="stock-note">${subtext}</div>
+                                ${subtext ? `<div class="stock-note">${subtext}</div>` : ''}
                             </div>
                             <div class="shopping-list-actions">
                                 <span class="shopping-status ${statusClass}">${statusLabel}</span>
