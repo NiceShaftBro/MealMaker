@@ -72,10 +72,14 @@
         .container.results-open .home-btn {
             top: 36px;
         }
-        .container.secret-open .home-btn,
-        .container.item-list-open .home-btn {
+        .container.secret-open .home-btn {
             top: 8px;
             left: 24px;
+        }
+        .container.item-list-open .home-btn {
+            top: auto;
+            bottom: 30px;
+            left: 34px;
         }
         .container.bought-open .home-btn {
             top: 34px;
@@ -509,10 +513,14 @@
             .container.results-open .home-btn {
                 top: 32px;
             }
-            .container.secret-open .home-btn,
-            .container.item-list-open .home-btn {
+            .container.secret-open .home-btn {
                 top: 8px;
                 left: 12px;
+            }
+            .container.item-list-open .home-btn {
+                top: auto;
+                bottom: 24px;
+                left: 18px;
             }
             .container.bought-open .home-btn {
                 top: 30px;
@@ -654,6 +662,23 @@
         .item-list.show {
             display: block;
         }
+        .item-list-actions {
+            position: sticky;
+            bottom: -16px;
+            z-index: 8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 18px -16px -16px;
+            padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+            background: #ffffff;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            backdrop-filter: none;
+        }
+        .item-list-actions .save-btn {
+            margin-top: 0;
+            min-width: 180px;
+        }
         .expiry-list-item {
             display: flex;
             justify-content: space-between;
@@ -784,7 +809,7 @@
         .manage-inline-controls {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             flex: 0 0 auto;
             white-space: nowrap;
         }
@@ -792,14 +817,12 @@
             font-size: 0.82em;
             font-weight: 700;
             color: #5a6270;
-            min-width: 78px;
+            min-width: 24px;
             text-align: right;
-        }
-        .manage-stock-label {
-            color: #7a8593;
+            margin-right: 4px;
         }
         .manage-stock-adjustment {
-            min-width: 28px;
+            min-width: 22px;
             text-align: center;
             font-size: 0.9em;
             font-weight: 800;
@@ -1889,6 +1912,7 @@
             const secretView = document.getElementById('secretView');
             const container = document.querySelector('.container');
             secretView.classList.remove('bought-mode');
+            setStatusVisibility(false);
 
             // Hide buttons and results
             document.querySelector('.buttons-container').style.display = 'none';
@@ -1934,7 +1958,7 @@
                                     <span class="item-name-text">${item}</span>
                                 </label>
                                 <div class="manage-inline-controls">
-                                    <span class="manage-stock-value"><span class="manage-stock-label">Current:</span> ${stock}</span>
+                                    <span class="manage-stock-value">${stock}</span>
                                     <button type="button" class="manage-stock-btn" onclick="changeManageStock('${rowIndex || ''}', -1)">−</button>
                                     <span class="manage-stock-adjustment ${adjustmentClass}">${adjustmentText}</span>
                                     <button type="button" class="manage-stock-btn" onclick="changeManageStock('${rowIndex || ''}', 1)">+</button>
@@ -1945,8 +1969,11 @@
                 });
                 html += '</div>';
             }
-            html += '<button class="save-btn" onclick="saveChanges()">Save Changes</button>';
-            html += '<button class="save-btn" onclick="hideItemList()" style="background: linear-gradient(45deg, #ccc, #bbb); margin-left: 10px;">Cancel</button>';
+            html += `
+                <div class="item-list-actions">
+                    <button class="save-btn" onclick="saveChanges()">Save Changes</button>
+                </div>
+            `;
 
             itemListDiv.innerHTML = html;
             itemListDiv.classList.add('show');
