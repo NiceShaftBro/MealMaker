@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Dinner Decider">
-    <link rel="manifest" href="PWA/manifest-v2.json?v=20260405c">
+    <link rel="manifest" href="PWA/manifest-v2.json?v=20260405d">
     <link rel="icon" type="image/png" sizes="192x192" href="Sprites/sanji-icon-192.png?v=3">
     <link rel="apple-touch-icon" href="Sprites/sanji-apple-touch-icon.png?v=3">
     <title>Dinner Decider</title>
@@ -1412,6 +1412,9 @@
         let currentItemListMode = 'manage';
         let appMessageTimeoutId = null;
         
+        const APP_VERSION = '2026-04-05d';
+        const APP_VERSION_URL = './version.json?v=20260405d';
+
         // Google Apps Script web app endpoint
         const API_URL = 'https://script.google.com/macros/s/AKfycbx_ljmCd4ipExfblatWEnG7LGUGxNIytiWLOxb7QwDf5vELmnDgPAImoqLkjVk2_LuNOw/exec';
         // Read-only metadata source that includes Opened/UseByDate columns
@@ -1482,7 +1485,35 @@
             }
         }
 
-        function applyAppUpdate() {
+        async function checkForAppUpdate({ silent = true } = {}) {
+            try {
+                const response = await fetch(APP_VERSION_URL, { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const versionInfo = await response.json();
+                const latestVersion = String(versionInfo?.version || '').trim();
+
+                if (latestVersion && latestVersion !== APP_VERSION) {
+                    showAppUpdatePrompt(`A new version (${latestVersion}) is ready. Tap Update Now to refresh the app.`);
+                    return true;
+                }
+
+                if (!silent) {
+                    showAppMessage('You already have the latest version.', 'success', 2200);
+                }
+            } catch (error) {
+                console.log('App version check failed:', error);
+                if (!silent) {
+                    showAppMessage('Could not check for updates right now.', 'error', 2600);
+                }
+            }
+
+            return false;
+        }
+
+        async function applyAppUpdate() {
             const updateBtn = document.getElementById('appUpdateNowBtn');
             if (updateBtn) {
                 updateBtn.disabled = true;
@@ -1494,7 +1525,23 @@
                 return;
             }
 
-            window.location.reload();
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                if (registration) {
+                    await registration.update();
+                }
+
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
+                }
+            } catch (error) {
+                console.log('Apply app update fallback:', error);
+            }
+
+            const refreshUrl = new URL(window.location.href);
+            refreshUrl.searchParams.set('updatedAt', Date.now().toString());
+            window.location.replace(refreshUrl.toString());
         }
 
         function getActiveScrollContainer() {
@@ -1548,6 +1595,8 @@
                     }
                 });
             }
+
+            checkForAppUpdate({ silent: true });
         }
 
         function setupPullToRefresh() {
@@ -3535,7 +3584,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
                 try {
-                    const registration = await navigator.serviceWorker.register('./service-worker.js?v=20260405c');
+                    const registration = await navigator.serviceWorker.register('./service-worker.js?v=20260405d');
 
                     const promptForAppUpdate = currentRegistration => {
                         if (!currentRegistration?.waiting) {
@@ -3570,6 +3619,7 @@
 
                     await registration.update();
                     promptForAppUpdate(registration);
+                    await checkForAppUpdate({ silent: true });
                     console.log('✓ Service Worker registered successfully:', registration);
                 } catch (error) {
                     console.log('Service Worker registration failed:', error);

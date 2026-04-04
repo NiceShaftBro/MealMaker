@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meal-maker-v2026-04-05c';
+const CACHE_NAME = 'meal-maker-v2026-04-05d';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -46,12 +46,26 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  const requestUrl = new URL(request.url);
   const acceptsHtml = (request.headers.get('accept') || '').includes('text/html');
   const isNavigationRequest = request.mode === 'navigate' || acceptsHtml;
+  const isVersionRequest = requestUrl.origin === self.location.origin && requestUrl.pathname.endsWith('/version.json');
+
+  if (isVersionRequest) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' }).catch(() => new Response(JSON.stringify({ version: CACHE_NAME }), {
+        status: 200,
+        headers: new Headers({
+          'Content-Type': 'application/json'
+        })
+      }))
+    );
+    return;
+  }
 
   if (isNavigationRequest) {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then(response => {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(request, responseClone));
