@@ -235,8 +235,8 @@
         }
         .secret-panel-header {
             position: sticky;
-            top: 0;
-            z-index: 12;
+            top: -1px;
+            z-index: 24;
             display: flex;
             align-items: flex-start;
             justify-content: center;
@@ -244,7 +244,11 @@
             margin: -20px -18px 14px;
             padding: 0 18px 12px;
             box-sizing: border-box;
-            background: #fff;
+            isolation: isolate;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(0,0,0,0.06);
             box-shadow: 0 4px 10px rgba(0,0,0,0.04);
         }
@@ -258,6 +262,8 @@
             line-height: 1.15;
         }
         .secret-panel-body {
+            position: relative;
+            z-index: 1;
             padding-top: 6px;
         }
         .secret-menu-options {
@@ -1587,10 +1593,12 @@
         let sauceMetadataMap = new Map();
         let pendingBoughtAdjustments = {};
         let pendingManageStockChanges = {};
+        let pendingManageEnabledChanges = {};
         let manageStockUseTimesTen = false;
         let pendingDeleteSelections = {};
         let showBinConfirmPrompt = false;
         let hasRefreshedForUpdate = false;
+        let pendingAppReload = false;
         let pullRefreshStartY = 0;
         let pullRefreshDistance = 0;
         let pullRefreshActive = false;
@@ -1699,6 +1707,35 @@
                 !itemListDiv?.classList.contains('show') &&
                 !secretView?.classList.contains('show')
             );
+        }
+
+        function canSafelyAutoReloadApp() {
+            return isHomeScreenActive() && !hasPendingUserEdits();
+        }
+
+        function applyPendingAppReloadIfSafe() {
+            if (!pendingAppReload || hasRefreshedForUpdate || !canSafelyAutoReloadApp()) {
+                return;
+            }
+
+            pendingAppReload = false;
+            hasRefreshedForUpdate = true;
+            window.location.reload();
+        }
+
+        function requestSafeAppReload() {
+            if (hasRefreshedForUpdate) {
+                return;
+            }
+
+            if (canSafelyAutoReloadApp()) {
+                hasRefreshedForUpdate = true;
+                window.location.reload();
+                return;
+            }
+
+            pendingAppReload = true;
+            console.log('Deferring automatic app reload until the app is idle.');
         }
 
         function triggerPullRefresh() {
@@ -1951,6 +1988,7 @@
             eggQuantity = 2;
             pendingBoughtAdjustments = {};
             pendingManageStockChanges = {};
+            pendingManageEnabledChanges = {};
             manageStockUseTimesTen = false;
             pendingDeleteSelections = {};
             showBinConfirmPrompt = false;
@@ -1964,6 +2002,7 @@
             container?.classList.remove('results-open', 'secret-open', 'secret-menu-open', 'item-list-open', 'bought-open', 'manage-stock-mode', 'bin-confirm-open', 'bin-list-mode');
             document.querySelector('.buttons-container').style.display = 'flex';
             setStatusVisibility(true);
+            applyPendingAppReloadIfSafe();
         }
 
         function buildEnabledCategories() {
@@ -2174,10 +2213,34 @@
             });
         }
 
+        function hasPendingUserEdits() {
+            return Object.keys(pendingBoughtAdjustments).length > 0 ||
+                Object.keys(pendingManageStockChanges).length > 0 ||
+                Object.keys(pendingManageEnabledChanges).length > 0 ||
+                Object.keys(pendingDeleteSelections).length > 0 ||
+                showBinConfirmPrompt;
+        }
+
+        function restoreScrollPosition(elementId, previousScroll, afterRestore) {
+            requestAnimationFrame(() => {
+                const element = document.getElementById(elementId);
+                if (!element) {
+                    return;
+                }
+
+                element.scrollTop = previousScroll;
+                if (typeof afterRestore === 'function') {
+                    afterRestore(element);
+                }
+            });
+        }
+
         function refreshVisibleContent() {
             const resultsDiv = document.getElementById('results');
             const itemListDiv = document.getElementById('itemList');
             const secretView = document.getElementById('secretView');
+            const previousItemListScroll = itemListDiv ? itemListDiv.scrollTop : 0;
+            const previousSecretViewScroll = secretView ? secretView.scrollTop : 0;
 
             if (resultsDiv?.classList.contains('show') && currentMeal) {
                 syncCurrentMealWithSpreadsheet();
@@ -2187,8 +2250,12 @@
             if (itemListDiv?.classList.contains('show')) {
                 if (currentItemListMode === 'bin') {
                     showBinList();
+                    restoreScrollPosition('itemList', previousItemListScroll);
                 } else {
                     showItemList();
+                    restoreScrollPosition('itemList', previousItemListScroll, () => {
+                        updateManageStockHeaderCategory();
+                    });
                 }
             }
 
@@ -2196,12 +2263,16 @@
                 const currentTitle = secretView.querySelector('h2')?.textContent || '';
                 if (currentTitle.includes('I Bought')) {
                     showBoughtItems();
+                    restoreScrollPosition('secretView', previousSecretViewScroll);
                 } else if (currentTitle.includes('Shopping List')) {
                     showShoppingList();
+                    restoreScrollPosition('secretView', previousSecretViewScroll);
                 } else if (currentTitle.includes('Expiring Items')) {
                     showExpiringItems();
+                    restoreScrollPosition('secretView', previousSecretViewScroll);
                 } else if (currentTitle.includes('Secret Menu')) {
                     showSecretView();
+                    restoreScrollPosition('secretView', previousSecretViewScroll);
                 }
             }
         }
@@ -2400,6 +2471,8 @@
             } else if (resultsDiv) {
                 resultsDiv.classList.remove('show');
             }
+
+            applyPendingAppReloadIfSafe();
         }
 
         async function toggleSauceOpened(categoryKey) {
@@ -2698,12 +2771,15 @@
                 const pendingStock = Object.prototype.hasOwnProperty.call(pendingManageStockChanges, String(rowIndex))
                     ? pendingManageStockChanges[String(rowIndex)]
                     : stock;
+                const pendingEnabled = Object.prototype.hasOwnProperty.call(pendingManageEnabledChanges, String(rowIndex))
+                    ? pendingManageEnabledChanges[String(rowIndex)]
+                    : enabled;
                 const stockDelta = pendingStock - stock;
 
                 if (!categories[category]) {
                     categories[category] = [];
                 }
-                categories[category].push({ item, enabled, id, rowIndex, stock, stockDelta });
+                categories[category].push({ item, enabled: pendingEnabled, id, rowIndex, stock, stockDelta });
             });
 
             // Build HTML
@@ -2732,7 +2808,7 @@
                         <div class="item-checkbox">
                             <div class="item-checkbox-row">
                                 <label class="item-checkbox-main">
-                                    <input type="checkbox" ${enabled ? 'checked' : ''} data-id="${id || ''}" data-row-index="${rowIndex || ''}" data-category="${category}" data-item="${item}">
+                                    <input type="checkbox" ${enabled ? 'checked' : ''} data-id="${id || ''}" data-row-index="${rowIndex || ''}" data-category="${category}" data-item="${item}" onchange="changeManageEnabledState('${rowIndex || ''}', this.checked)">
                                     <span class="item-name-text">${item}</span>
                                 </label>
                                 <div class="manage-inline-controls">
@@ -2971,6 +3047,7 @@
             const returnTarget = lastItemListSource;
 
             pendingManageStockChanges = {};
+            pendingManageEnabledChanges = {};
             manageStockUseTimesTen = false;
             pendingDeleteSelections = {};
             showBinConfirmPrompt = false;
@@ -2991,6 +3068,27 @@
                 displayResults(currentMeal);
             } else {
                 setStatusVisibility(true);
+            }
+
+            applyPendingAppReloadIfSafe();
+        }
+
+        function changeManageEnabledState(rowIndex, isEnabled) {
+            const key = String(rowIndex || '');
+            if (!key) {
+                return;
+            }
+
+            const row = spreadsheetData.find(item => String(item.rowIndex) === key);
+            if (!row) {
+                return;
+            }
+
+            const originalEnabled = String(row['Enabled']).toUpperCase().trim() === 'TRUE';
+            if (Boolean(isEnabled) === originalEnabled) {
+                delete pendingManageEnabledChanges[key];
+            } else {
+                pendingManageEnabledChanges[key] = Boolean(isEnabled);
             }
         }
 
@@ -3035,6 +3133,7 @@
             const previousScroll = itemListDiv ? itemListDiv.scrollTop : 0;
 
             pendingManageStockChanges = {};
+            pendingManageEnabledChanges = {};
             showItemList();
 
             requestAnimationFrame(() => {
@@ -3662,7 +3761,9 @@
                 const rowIndex = cb.getAttribute('data-row-index');
                 const item = cb.getAttribute('data-item');
                 const category = cb.getAttribute('data-category');
-                const newEnabled = cb.checked;
+                const newEnabled = Object.prototype.hasOwnProperty.call(pendingManageEnabledChanges, String(rowIndex))
+                    ? pendingManageEnabledChanges[String(rowIndex)]
+                    : cb.checked;
                 const row = spreadsheetData.find(r => (id ? r.id == id : rowIndex ? String(r.rowIndex) === String(rowIndex) : r.Food === item && r.Category === category));
                 const currentEnabled = row ? String(row['Enabled']).toUpperCase().trim() === 'TRUE' : false;
                 const currentStock = row ? getStockValue(row) : 0;
@@ -3740,6 +3841,7 @@
 
             // Refresh data
             pendingManageStockChanges = {};
+            pendingManageEnabledChanges = {};
             loadSpreadsheet();
             hideItemList();
         }
@@ -3760,12 +3862,7 @@
                     };
 
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
-                        if (hasRefreshedForUpdate) {
-                            return;
-                        }
-
-                        hasRefreshedForUpdate = true;
-                        window.location.reload();
+                        requestSafeAppReload();
                     });
 
                     registration.addEventListener('updatefound', () => {
