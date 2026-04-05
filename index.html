@@ -739,12 +739,15 @@
                 left: -2px;
             }
             .secret-sprite-btn {
-                right: -8px;
+                right: -16px;
             }
             .container.results-open:not(.secret-open) .side-sprite-decor,
             .container.results-open:not(.secret-open) .secret-sprite-btn {
                 width: 62px;
                 height: 62px;
+            }
+            .container.results-open:not(.secret-open) .secret-sprite-btn {
+                right: -14px;
             }
             .secret-view {
                 padding: 14px 12px 12px;
@@ -3441,9 +3444,8 @@
                         statusLabel = 'Out of Stock';
                         statusClass = 'out';
                     } else if (entry.status === 'expired') {
-                        statusLabel = 'Expired';
+                        statusLabel = `Expired: ${formatDaysUntilText(entry.daysUntilExpiry)}`;
                         statusClass = 'expired';
-                        subtext = `<span class="shopping-expiry-text expired">Expired ${formatDaysUntilText(entry.daysUntilExpiry)}</span>`;
                     } else if (entry.status === 'expiring') {
                         statusLabel = 'Expires soon';
                         statusClass = 'expiring';
