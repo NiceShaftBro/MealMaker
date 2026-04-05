@@ -758,26 +758,26 @@
             }
             .container.item-list-open.manage-stock-mode .item-list,
             .container.item-list-open.bin-list-mode .item-list {
-                flex: 1 1 auto;
+                flex: 0 1 auto;
                 min-height: 0;
-                max-height: none;
+                max-height: 68vh;
                 height: auto;
-                margin-top: 6px;
-                padding: 0 10px 10px;
+                margin-top: 5px;
+                padding: 0 9px 9px;
             }
             .bin-list-sticky-header,
             .manage-stock-sticky-header {
                 grid-template-columns: 40px minmax(0, 1fr) auto;
-                gap: 8px;
-                margin: 0 -10px 10px;
-                padding: 8px 10px 10px;
+                gap: 7px;
+                margin: 0 -9px 9px;
+                padding: 7px 9px 9px;
             }
             .bin-list-close-btn,
             .manage-stock-close-btn {
-                width: 38px;
-                height: 38px;
-                border-radius: 11px;
-                font-size: 21px;
+                width: 34px;
+                height: 34px;
+                border-radius: 10px;
+                font-size: 19px;
             }
             .bin-list-header-title,
             .manage-stock-current-category {
@@ -799,6 +799,50 @@
                 font-size: 1em;
                 line-height: 1.3;
                 padding-bottom: 1px;
+            }
+            .container.item-list-open.manage-stock-mode .item-list {
+                margin-top: 5px;
+                padding: 0 9px 9px;
+            }
+            .container.item-list-open.manage-stock-mode .manage-stock-sticky-header {
+                gap: 6px;
+                margin: 0 -9px 7px;
+                padding: 6px 9px 7px;
+            }
+            .container.item-list-open.manage-stock-mode .manage-stock-close-btn {
+                width: 31px;
+                height: 31px;
+                border-radius: 9px;
+                font-size: 17px;
+            }
+            .container.item-list-open.manage-stock-mode .manage-stock-current-category {
+                font-size: 0.92em;
+                line-height: 1.2;
+            }
+            .container.item-list-open.manage-stock-mode .stock-multiplier-toggle {
+                padding: 4px 7px;
+                font-size: 0.74em;
+            }
+            .container.item-list-open.manage-stock-mode .item-checkbox-row {
+                padding: 7px 9px;
+            }
+            .container.item-list-open.manage-stock-mode .manage-inline-controls {
+                gap: 3px;
+            }
+            .container.item-list-open.manage-stock-mode .manage-stock-value {
+                font-size: 0.74em;
+                min-width: 22px;
+                margin-right: 3px;
+            }
+            .container.item-list-open.manage-stock-mode .manage-stock-adjustment {
+                min-width: 20px;
+                font-size: 0.82em;
+            }
+            .container.item-list-open.manage-stock-mode .manage-stock-btn {
+                min-width: 25px;
+                width: 25px;
+                height: 25px;
+                font-size: 14px;
             }
             .secret-menu-options {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1336,9 +1380,16 @@
             background: rgba(255, 107, 107, 0.14);
             color: #d62828;
         }
+        .shopping-status.expired {
+            background: rgba(230, 57, 70, 0.18);
+            color: #a4161a;
+        }
         .shopping-expiry-text {
             color: #d62828;
             font-weight: 700;
+        }
+        .shopping-expiry-text.expired {
+            color: #a4161a;
         }
         .item-list h2 {
             margin: 0 0 16px;
@@ -1727,6 +1778,7 @@
         function getActiveScrollContainer() {
             const secretView = document.getElementById('secretView');
             const itemList = document.getElementById('itemList');
+            const resultsDiv = document.getElementById('results');
 
             if (secretView?.classList.contains('show')) {
                 return secretView;
@@ -1734,6 +1786,10 @@
 
             if (itemList?.classList.contains('show')) {
                 return itemList;
+            }
+
+            if (resultsDiv?.classList.contains('show')) {
+                return resultsDiv;
             }
 
             return document.querySelector('.container');
@@ -1777,6 +1833,30 @@
                 !itemListDiv?.classList.contains('show') &&
                 !secretView?.classList.contains('show')
             );
+        }
+
+        function canUsePullRefresh() {
+            const container = document.querySelector('.container');
+            const resultsDiv = document.getElementById('results');
+            const itemListDiv = document.getElementById('itemList');
+            const secretView = document.getElementById('secretView');
+
+            const resultsActive = Boolean(
+                container &&
+                container.classList.contains('results-open') &&
+                resultsDiv?.classList.contains('show') &&
+                !secretView?.classList.contains('show') &&
+                !itemListDiv?.classList.contains('show')
+            );
+
+            const secretMenuActive = Boolean(
+                container &&
+                container.classList.contains('secret-menu-open') &&
+                secretView?.classList.contains('show') &&
+                !itemListDiv?.classList.contains('show')
+            );
+
+            return isHomeScreenActive() || resultsActive || secretMenuActive;
         }
 
         function canSafelyAutoReloadApp() {
@@ -1839,7 +1919,7 @@
                     return;
                 }
 
-                if (!isHomeScreenActive()) {
+                if (!canUsePullRefresh()) {
                     pullRefreshActive = false;
                     return;
                 }
@@ -1866,7 +1946,7 @@
                 const atTop = !scroller || typeof scroller.scrollTop !== 'number' || scroller.scrollTop <= 0;
                 const distance = Math.max(0, currentY - pullRefreshStartY);
 
-                if (!isHomeScreenActive() || !atTop || distance <= 0) {
+                if (!canUsePullRefresh() || !atTop || distance <= 0) {
                     updatePullRefreshUI(0, false);
                     return;
                 }
@@ -2207,10 +2287,12 @@
                     const isSauce = String(row?.Category ?? '').toLowerCase().trim() === 'sauce';
                     const isOutOfStock = stock <= 0;
                     const isLowStock = !isOutOfStock && stock <= lowThreshold;
+                    const isExpired = Number.isFinite(daysUntilExpiry) && daysUntilExpiry < 0;
                     const isExpiringSoon = Number.isFinite(daysUntilExpiry) && daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
+                    const needsExpiryAttention = isExpired || isExpiringSoon;
                     const shouldInclude = isSauce
-                        ? (isOutOfStock || isExpiringSoon)
-                        : (isOutOfStock || isLowStock || isExpiringSoon);
+                        ? (isOutOfStock || needsExpiryAttention)
+                        : (isOutOfStock || isLowStock || needsExpiryAttention);
 
                     if (!shouldInclude) {
                         return null;
@@ -2219,6 +2301,8 @@
                     let status = 'low';
                     if (isOutOfStock) {
                         status = 'out';
+                    } else if (isExpired) {
+                        status = 'expired';
                     } else if (isExpiringSoon) {
                         status = 'expiring';
                     }
@@ -2236,11 +2320,11 @@
                 })
                 .filter(Boolean)
                 .sort((a, b) => {
-                    const rank = status => ({ out: 0, expiring: 1, low: 2 }[status] ?? 3);
+                    const rank = status => ({ out: 0, expired: 1, expiring: 2, low: 3 }[status] ?? 4);
                     const statusOrder = rank(a.status) - rank(b.status);
                     if (statusOrder !== 0) return statusOrder;
 
-                    if (a.status === 'expiring' && b.status === 'expiring') {
+                    if ((a.status === 'expired' || a.status === 'expiring') && (b.status === 'expired' || b.status === 'expiring')) {
                         return a.expiryDate - b.expiryDate;
                     }
 
@@ -3346,7 +3430,7 @@
             `;
 
             if (shoppingItems.length === 0) {
-                html += '<p>Nothing is low or out of stock right now.</p>';
+                html += '<p>Nothing is low, out of stock, or near expiry right now.</p>';
             } else {
                 shoppingItems.forEach(entry => {
                     let statusLabel = `Low Stock: ${entry.stock}`;
@@ -3356,11 +3440,14 @@
                     if (entry.status === 'out') {
                         statusLabel = 'Out of Stock';
                         statusClass = 'out';
+                    } else if (entry.status === 'expired') {
+                        statusLabel = 'Expired';
+                        statusClass = 'expired';
+                        subtext = `<span class="shopping-expiry-text expired">Expired ${formatDaysUntilText(entry.daysUntilExpiry)}</span>`;
                     } else if (entry.status === 'expiring') {
                         statusLabel = 'Expires soon';
                         statusClass = 'expiring';
-                        const dayLabel = entry.daysUntilExpiry === 1 ? 'day' : 'days';
-                        subtext = `<span class="shopping-expiry-text">Expires: ${entry.daysUntilExpiry} ${dayLabel}</span>`;
+                        subtext = `<span class="shopping-expiry-text">Expires ${formatDaysUntilText(entry.daysUntilExpiry)}</span>`;
                     }
 
                     html += `

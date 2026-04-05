@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meal-maker-v2026-04-05e';
+const CACHE_NAME = 'meal-maker-v2026-04-05g';
 const STATIC_ASSETS = [
   './',
   './index.html',
